@@ -3,15 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ Supabase environment variables are missing! Check your Vercel/Local settings.');
-}
-
-// Fallback to empty strings but prevent crashing if possible, although createClient will still throw if Url is invalid
+// Fallback to empty strings but prevent crashing if possible
 export const supabase = (supabaseUrl && supabaseAnonKey)
     ? createClient(supabaseUrl, supabaseAnonKey)
-    : null as any;
+    : {
+        auth: {
+            getSession: async () => ({ data: { session: null }, error: null }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+            signOut: async () => { }
+        },
+        from: () => ({
+            select: () => ({ eq: () => ({ single: () => ({ data: null, error: null }), update: () => ({ eq: () => ({}) }) }) })
+        })
+    } as any;
 
-if (!supabase) {
-    console.error('❌ Supabase client failed to initialize. The app may not function correctly.');
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Supabase client failed to initialize due to missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY.');
 }
