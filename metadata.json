@@ -1,0 +1,7 @@
+{
+  "name": "XTUDO Paraguai Marketplace",
+  "description": "The dominant cross-border marketplace connecting Ciudad del Este sellers to Brazilian consumers with AI-powered deal detection and enterprise-grade dashboards.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
