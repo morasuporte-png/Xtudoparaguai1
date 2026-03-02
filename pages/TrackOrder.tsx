@@ -9,59 +9,46 @@ interface TrackingEvent {
     mensagem?: string;
 }
 
-const mockEvents: TrackingEvent[] = [
-    {
-        status: 'Objeto entregue ao destinatário',
-        data: '15/10/2026',
-        hora: '14:30',
-        local: 'São Paulo - SP',
-    },
-    {
-        status: 'Objeto saiu para entrega ao destinatário',
-        data: '15/10/2026',
-        hora: '08:15',
-        local: 'São Paulo - SP',
-    },
-    {
-        status: 'Objeto em trânsito - por favor aguarde',
-        data: '14/10/2026',
-        hora: '10:00',
-        local: 'Unidade de Tratamento, Cajamar - SP',
-        mensagem: 'para Unidade de Distribuição, São Paulo - SP'
-    },
-    {
-        status: 'Objeto postado',
-        data: '12/10/2026',
-        hora: '16:45',
-        local: 'Foz do Iguaçu - PR',
-    }
-];
-
 const TrackOrder: React.FC = () => {
+    const [events, setEvents] = useState<TrackingEvent[]>([]);
     const [trackingCode, setTrackingCode] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [error, setError] = useState(false);
 
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!trackingCode.trim()) return;
 
         setIsSearching(true);
         setError(false);
         setHasSearched(false);
+        setEvents([]);
 
-        // Simulate API call to Correios / tracking service
-        setTimeout(() => {
-            setIsSearching(false);
-            // Mock validation: accept anything ending with "BR" or matching 13 chars
+        try {
             const code = trackingCode.trim().toUpperCase();
-            if (code.length >= 9) {
-                setHasSearched(true);
-            } else {
-                setError(true);
+            // Using linketrack free API with test tokens
+            const response = await fetch(`https://api.linketrack.com/track/json?user=teste&token=1abcd00b2731640e886fb41a8a9671ad1434c599dbaa0a0de9a5aa619f29a83f&codigo=${code}`);
+
+            if (!response.ok) {
+                throw new Error('API Error');
             }
-        }, 1500);
+
+            const data = await response.json();
+
+            if (!data || !data.eventos || data.eventos.length === 0) {
+                throw new Error('No events found');
+            }
+
+            setEvents(data.eventos);
+            setHasSearched(true);
+        } catch (err) {
+            console.error("Erro ao buscar rastreamento:", err);
+            // Fallback pra erro: Código incorreto, ou a API caiu (mock fallback manual?)
+            setError(true);
+        } finally {
+            setIsSearching(false);
+        }
     };
 
     const getStatusIcon = (status: string) => {
@@ -72,7 +59,7 @@ const TrackOrder: React.FC = () => {
         return <PackageSearch className="w-5 h-5 text-slate-500" />;
     };
 
-    const isDelivered = mockEvents[0]?.status.includes('entregue');
+    const isDelivered = events[0]?.status.includes('entregue');
 
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -168,7 +155,7 @@ const TrackOrder: React.FC = () => {
                         {/* Timeline */}
                         <div className="p-6 md:p-8">
                             <div className="relative border-l border-slate-200 ml-5 space-y-8">
-                                {mockEvents.map((event, index) => {
+                                {events.map((event, index) => {
                                     const isLatest = index === 0;
                                     return (
                                         <div key={index} className="relative pl-8 md:pl-10">
