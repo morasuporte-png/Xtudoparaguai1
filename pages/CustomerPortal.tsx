@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
-import { MOCK_PRODUCTS } from '../constants';
+import React, { useState, useEffect } from 'react';
 import { useChat } from '../context/ChatContext';
 import { useRewards, TIER_COLORS } from '../context/RewardsContext';
+import { useAuth } from '../context/AuthContext';
+import { getUserOrders, getProfile, upsertProfile, DbOrder, DbProfile } from '../services/db';
 
 type PortalTab = 'orders' | 'profile' | 'addresses' | 'wishlist' | 'conversations' | 'rewards';
-
-const MOCK_ORDERS = [
-    { id: '10825', date: '22 Fev 2026', total: 6890, status: 'Preparando envio', items: 1, img: MOCK_PRODUCTS[0].images[0] },
-    { id: '10740', date: '15 Fev 2026', total: 1250, status: 'Entregue', items: 2, img: MOCK_PRODUCTS[5].images[0] },
-    { id: '10612', date: '02 Fev 2026', total: 340, status: 'Entregue', items: 1, img: MOCK_PRODUCTS[10].images[0] },
-];
 
 const CustomerPortal: React.FC = () => {
     const [activeTab, setActiveTab] = useState<PortalTab>('orders');
@@ -17,67 +12,158 @@ const CustomerPortal: React.FC = () => {
     const { points, tier, history, nextTierPoints, pointsToDiscount } = useRewards();
     const rewardColors = TIER_COLORS[tier];
     const tierIcons: Record<string, string> = { Bronze: '🥉', Silver: '🥈', Gold: '🥇' };
+    const { user } = useAuth();
 
-    const RenderOrders = () => (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {MOCK_ORDERS.map(order => (
-                <div key={order.id} className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl hover:shadow-slate-100 transition-all group">
-                    <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden shadow-inner border border-slate-100 flex-shrink-0">
-                            <img src={order.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pedido #{order.id}</p>
-                            <h4 className="text-sm font-black text-slate-800 mb-1">{order.date}</h4>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                                <span className="text-xs font-bold text-indigo-600">{order.status}</span>
+    // Real data from Supabase
+    const [orders, setOrders] = useState<DbOrder[]>([]);
+    const [profile, setProfile] = useState<DbProfile | null>(null);
+    const [profileForm, setProfileForm] = useState({ full_name: '', phone: '' });
+    const [loadingOrders, setLoadingOrders] = useState(false);
+    const [savingProfile, setSavingProfile] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        setLoadingOrders(true);
+        getUserOrders(user.id).then(data => { setOrders(data); setLoadingOrders(false); });
+        getProfile(user.id).then(data => {
+            if (data) {
+                setProfile(data);
+                setProfileForm({ full_name: data.full_name ?? '', phone: data.phone ?? '' });
+            }
+        });
+    }, [user]);
+
+    const handleSaveProfile = async () => {
+        if (!user) return;
+        setSavingProfile(true);
+        await upsertProfile({ id: user.id, full_name: profileForm.full_name, phone: profileForm.phone });
+        setSavingProfile(false);
+    };
+
+    const STATUS_COLOR: Record<string, string> = {
+        pending: 'text-amber-600',
+        paid: 'text-blue-600',
+        shipped: 'text-indigo-600',
+        delivered: 'text-emerald-600',
+        cancelled: 'text-rose-600',
+    };
+
+    const STATUS_LABEL: Record<string, string> = {
+        pending: 'Aguardando Pagamento',
+        paid: 'Pagamento Aprovado',
+        shipped: 'Em Trânsito',
+        delivered: 'Entregue',
+        cancelled: 'Cancelado',
+    };
+
+    const RenderOrders = () => {
+        if (loadingOrders) return (
+            <div className="flex items-center justify-center py-20 text-slate-400">
+                <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                Carregando seus pedidos...
+            </div>
+        );
+
+        if (orders.length === 0) return (
+            <div className="bg-white rounded-[40px] border border-slate-100 p-20 text-center">
+                <div className="text-5xl mb-4">🛍️</div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">Nenhum pedido ainda</h3>
+                <p className="text-slate-400 font-medium max-w-xs mx-auto">Suas compras aparecerão aqui quando você realizar o primeiro pedido.</p>
+                <button onClick={() => { window.location.hash = '#marketplace'; }} className="mt-6 bg-indigo-600 text-white font-black px-8 py-3 rounded-2xl text-sm hover:bg-indigo-700 transition-all">
+                    Ir às compras
+                </button>
+            </div>
+        );
+
+        return (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {orders.map(order => {
+                    const firstItem = order.order_items?.[0];
+                    const dateFormatted = new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+                    return (
+                        <div key={order.id} className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl hover:shadow-slate-100 transition-all group">
+                            <div className="flex items-center gap-6 w-full md:w-auto">
+                                <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden shadow-inner border border-slate-100 flex-shrink-0">
+                                    {firstItem?.image_url
+                                        ? <img src={firstItem.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        : <div className="w-full h-full flex items-center justify-center text-3xl">📦</div>
+                                    }
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pedido #{order.id.slice(0, 8).toUpperCase()}</p>
+                                    <h4 className="text-sm font-black text-slate-800 mb-1">{dateFormatted}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                                        <span className={`text-xs font-bold ${STATUS_COLOR[order.status] ?? 'text-slate-500'}`}>
+                                            {STATUS_LABEL[order.status] ?? order.status}
+                                        </span>
+                                    </div>
+                                    {order.order_items && order.order_items.length > 1 && (
+                                        <p className="text-[10px] text-slate-400 mt-0.5">{order.order_items.length} itens</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between w-full md:w-auto md:border-l md:border-slate-50 md:pl-8 gap-8">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
+                                    <p className="text-lg font-black text-slate-900 leading-none">R$ {order.total_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                                {order.tracking_code ? (
+                                    <button
+                                        onClick={() => { window.location.hash = `#track-order`; }}
+                                        className="bg-slate-900 text-white font-black px-6 py-3 rounded-2xl text-xs hover:bg-black transition-all shadow-lg active:scale-95">
+                                        Rastrear
+                                    </button>
+                                ) : (
+                                    <span className="text-xs text-slate-400 font-semibold">Sem rastreio</span>
+                                )}
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center justify-between w-full md:w-auto md:border-l md:border-slate-50 md:pl-8 gap-8">
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
-                            <p className="text-lg font-black text-slate-900 leading-none">R$ {order.total.toLocaleString('pt-BR')}</p>
-                        </div>
-                        <button className="bg-slate-900 text-white font-black px-6 py-3 rounded-2xl text-xs hover:bg-black transition-all shadow-lg active:scale-95">
-                            Rastrear
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+                    );
+                })}
+            </div>
+        );
+    };
 
     const RenderProfile = () => (
         <div className="bg-white rounded-[40px] border border-slate-100 p-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-8 mb-12">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-indigo-100">
-                    MS
+                    {profileForm.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div>
-                    <h3 className="text-2xl font-black text-slate-900">Morada Silva</h3>
-                    <p className="text-slate-400 font-medium">morada.silva@exemplo.com</p>
-                    <button className="text-xs font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">Alterar Foto</button>
+                    <h3 className="text-2xl font-black text-slate-900">{profileForm.full_name || 'Meu Perfil'}</h3>
+                    <p className="text-slate-400 font-medium">{user?.email ?? ''}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                    <input type="text" defaultValue="Morada Silva" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input
+                        type="text"
+                        value={profileForm.full_name}
+                        onChange={e => setProfileForm(p => ({ ...p, full_name: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
                 <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-                    <input type="text" defaultValue="+55 (11) 99999-9999" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input
+                        type="text"
+                        value={profileForm.phone}
+                        onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
                 <div className="space-y-2 lg:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-                    <input type="email" defaultValue="morada.silva@exemplo.com" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input type="email" value={user?.email ?? ''} disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-400 focus:outline-none" />
                 </div>
             </div>
-            <button className="mt-12 bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95">
-                Salvar Alterações
+            <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="mt-12 bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60">
+                {savingProfile ? 'Salvando...' : 'Salvar Alterações'}
             </button>
         </div>
     );

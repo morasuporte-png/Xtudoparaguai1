@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { ProductDraft } from '../types';
 import { CATEGORY_MAP } from '../constants';
+import { saveProduct } from '../services/db';
+import { useAuth } from '../context/AuthContext';
 
 interface ProductRegistrationProps {
     onBack: () => void;
@@ -41,6 +43,7 @@ const SAMPLE_IMAGES = [
 
 const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initialProduct }) => {
     const isEdit = !!initialProduct;
+    const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [draft, setDraft] = useState<ProductDraft>(initialProduct ? {
         ...initialProduct,
@@ -50,6 +53,8 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
         specs: initialProduct.specs?.length ? initialProduct.specs : [{ key: '', value: '' }]
     } : EMPTY_DRAFT);
     const [published, setPublished] = useState(false);
+    const [publishing, setPublishing] = useState(false);
+    const [publishError, setPublishError] = useState('');
     const [imageUrlInput, setImageUrlInput] = useState('');
 
     const set = (key: keyof ProductDraft, value: any) =>
@@ -78,6 +83,36 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
     const addSampleImages = () => {
         const toAdd = SAMPLE_IMAGES.filter(u => !draft.images.includes(u)).slice(0, 8 - draft.images.length);
         set('images', [...draft.images, ...toAdd]);
+    };
+
+    const handlePublish = async () => {
+        if (!user) { setPublishError('Você precisa estar logado para publicar.'); return; }
+        setPublishing(true);
+        setPublishError('');
+        const productId = await saveProduct({
+            id: initialProduct?.id,
+            seller_id: user.id,
+            title: draft.title,
+            category: draft.category,
+            sub_category: draft.subCategory || null,
+            description: draft.description || null,
+            brand: draft.brand || null,
+            condition: draft.condition,
+            origin: draft.origin,
+            price_brl: Number(draft.priceBRL),
+            compare_price_brl: draft.comparePriceBRL ? Number(draft.comparePriceBRL) : null,
+            stock: Number(draft.stock),
+            sku: draft.sku || null,
+            warranty: draft.warranty,
+            shipping: draft.shipping,
+            delivery_days: draft.deliveryDays,
+            images: draft.images,
+            specs: draft.specs.filter(s => s.key && s.value),
+            is_active: true,
+        });
+        setPublishing(false);
+        if (productId) { setPublished(true); }
+        else { setPublishError('Erro ao salvar o produto. Verifique sua conexão e tente novamente.'); }
     };
 
     if (published) {
@@ -531,12 +566,19 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
                                 Salvar Rascunho
                             </button>
                             <button
-                                onClick={() => setPublished(true)}
-                                className="flex-1 py-4 bg-indigo-600 text-white font-extrabold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm"
+                                onClick={handlePublish}
+                                disabled={publishing}
+                                className="flex-1 py-4 bg-indigo-600 text-white font-extrabold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm disabled:opacity-70"
                             >
-                                {isEdit ? '💾 Salvar Alterações' : '🚀 Publicar Agora'}
+                                {publishing
+                                    ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>Publicando...</span>
+                                    : (isEdit ? '💾 Salvar Alterações' : '🚀 Publicar Agora')
+                                }
                             </button>
                         </div>
+                        {publishError && (
+                            <div className="mt-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-sm font-bold text-center">{publishError}</div>
+                        )}
                     </div>
                 )}
 
