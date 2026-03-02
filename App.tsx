@@ -12,6 +12,7 @@ import ProductRegistration from './pages/ProductRegistration';
 import ProductDetail from './pages/ProductDetail';
 import CustomerPortal from './pages/CustomerPortal';
 import OrderSuccess from './pages/OrderSuccess';
+import TrackOrder from './pages/TrackOrder';
 import Checkout from './pages/Checkout';
 import SellerProfile from './pages/SellerProfile';
 import SearchPage from './pages/SearchPage';
@@ -108,6 +109,11 @@ const App: React.FC = () => {
     // Order Success
     if (currentHash === '#order-success') {
       return <OrderSuccess />;
+    }
+
+    // Track Order
+    if (currentHash === '#track-order') {
+      return <TrackOrder />;
     }
 
     // Rewards Page

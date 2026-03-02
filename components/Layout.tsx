@@ -476,14 +476,34 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
 
           {/* Links */}
           {[
-            { title: 'Plataforma', links: ['Como funciona', 'Segurança & Trust', 'Logística', 'Sellers Verificados'] },
-            { title: 'Empresa', links: ['Sobre nós', 'Carreiras', 'Contato'] },
+            {
+              title: 'Plataforma',
+              links: [
+                { label: 'Como funciona', href: '#' },
+                { label: 'Segurança & Trust', href: '#' },
+                { label: 'Logística', href: '#' },
+                { label: 'Rastrear Pedido', href: '#track-order' },
+                { label: 'Sellers Verificados', href: '#' }
+              ]
+            },
+            {
+              title: 'Empresa',
+              links: [
+                { label: 'Sobre nós', href: '#' },
+                { label: 'Carreiras', href: '#' },
+                { label: 'Contato', href: '#' }
+              ]
+            },
           ].map(section => (
             <div key={section.title}>
               <h4 className="text-white font-black text-sm mb-4 uppercase tracking-widest">{section.title}</h4>
               <ul className="space-y-2.5">
                 {section.links.map(l => (
-                  <li key={l}><a href="#" className="text-sm hover:text-white hover:translate-x-0.5 transition-all inline-block">{l}</a></li>
+                  <li key={l.label}>
+                    <a href={l.href} className="text-sm hover:text-white hover:translate-x-0.5 transition-all inline-block">
+                      {l.label}
+                    </a>
+                  </li>
                 ))}
                 {section.title === 'Empresa' && (
                   <li>
