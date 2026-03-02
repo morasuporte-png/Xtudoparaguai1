@@ -107,6 +107,12 @@ const Checkout: React.FC = () => {
     const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
     const [paymentError, setPaymentError] = useState('');
 
+    // Shipping
+    interface ShippingOption { id: number; name: string; company: string; price: number; delivery_time: number; }
+    const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+    const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+    const [loadingShipping, setLoadingShipping] = useState(false);
+
     // Coupon Input (Local for the field)
     const [couponInput, setCouponInput] = useState(coupon || '');
     const [couponError, setCouponError] = useState('');
@@ -119,7 +125,8 @@ const Checkout: React.FC = () => {
 
     const pixDiscount = payment === 'pix' ? totalPrice * 0.05 : 0;
     // couponDiscount is now from useCart()
-    const displayTotal = Math.max(0, totalPrice - pixDiscount - couponDiscount - redeemDiscount);
+    const shippingCost = selectedShipping?.price ?? 0;
+    const displayTotal = Math.max(0, totalPrice - pixDiscount - couponDiscount - redeemDiscount) + shippingCost;
     const savings = items.reduce((s, i) => s + (i.product.comparePriceBRL - i.product.priceBRL) * i.quantity, 0);
     const pointsToEarn = Math.floor(displayTotal * 0.1);
 
@@ -148,6 +155,19 @@ const Checkout: React.FC = () => {
                     state: data.uf || prev.state,
                 }));
                 showToast('Endereço preenchido!', 'success', '📍');
+                // Calcular frete automaticamente
+                setLoadingShipping(true);
+                setSelectedShipping(null);
+                try {
+                    const shippingRes = await fetch('/api/shipping', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cep_destino: rawCep }),
+                    });
+                    const shippingData = await shippingRes.json();
+                    setShippingOptions(shippingData.options ?? []);
+                } catch { setShippingOptions([]); }
+                finally { setLoadingShipping(false); }
             }
         } catch { showToast('Erro ao buscar CEP.', 'error', '❌'); }
         finally { setIsFetchingCep(false); }
@@ -418,6 +438,42 @@ const Checkout: React.FC = () => {
                                         <input name="city" value={form.city} onChange={handleFormChange} placeholder="São Paulo" className="w-full px-5 py-4 rounded-2xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder-slate-300 bg-slate-50" />
                                     </div>
                                 </div>
+
+                                {/* Shipping options (appear after CEP lookup) */}
+                                {loadingShipping && (
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl text-slate-400">
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                                        Calculando frete...
+                                    </div>
+                                )}
+
+                                {!loadingShipping && shippingOptions.length > 0 && (
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">🚚 Opções de Frete</label>
+                                        {shippingOptions.map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => setSelectedShipping(opt)}
+                                                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 text-left transition-all ${selectedShipping?.id === opt.id
+                                                        ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                                                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                                                    }`}
+                                            >
+                                                <div>
+                                                    <p className="font-black text-slate-900 text-sm">{opt.company} — {opt.name}</p>
+                                                    <p className="text-xs text-slate-400 font-medium mt-0.5">{opt.delivery_time} dias úteis</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-black text-indigo-700">R$ {opt.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedShipping?.id === opt.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'
+                                                        }`}>
+                                                        {selectedShipping?.id === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="p-8 pt-0">
                                 <button
