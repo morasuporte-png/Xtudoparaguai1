@@ -26,12 +26,14 @@ import PageTransition from './components/PageTransition';
 import { ChatProvider } from './context/ChatContext';
 import ChatWidget from './components/ChatWidget';
 import RewardsPage from './pages/RewardsPage';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Auth from './pages/Auth';
 
-const App: React.FC = () => {
+// ── Inner app — has access to AuthContext ─────────────────────────────────────
+const AppInner: React.FC = () => {
   const [activeRole, setActiveRole] = useState<UserRole>(UserRole.BUYER);
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#marketplace');
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -46,7 +48,6 @@ const App: React.FC = () => {
     if (currentHash === '#marketplace' || currentHash === '' || currentHash.startsWith('#category/') || currentHash.startsWith('#search')) setActiveRole(UserRole.BUYER);
     if (currentHash === '#sellers' || currentHash === '#seller/products/new' || currentHash.startsWith('#seller/products/edit/')) setActiveRole(UserRole.SELLER);
     if (currentHash === '#wholesale') setActiveRole(UserRole.WHOLESALE);
-    // #investors is footer-only, keep role as-is
   }, [currentHash]);
 
   const handleRoleChange = (role: UserRole) => {
@@ -56,110 +57,85 @@ const App: React.FC = () => {
     if (role === UserRole.WHOLESALE) window.location.hash = '#wholesale';
   };
 
-  const renderContent = () => {
-    if (currentHash === '#checkout') {
-      return <Checkout />;
-    }
-    // Seller profile: #seller/s1, #seller/s2, etc.
-    if (currentHash.startsWith('#seller/') && !currentHash.includes('products')) {
-      const sellerId = currentHash.replace('#seller/', '');
+  // Guard: redirects to #auth and shows Auth page if visitor is not logged in
+  const requireAuth = (element: React.ReactElement): React.ReactElement => {
+    if (loading) {
       return (
-        <SellerProfile
-          sellerId={sellerId}
-          onBack={() => { window.location.hash = '#marketplace'; }}
-        />
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
       );
     }
-    // Product registration (lojista)
-    if (currentHash === '#seller/products/new') {
-      return <ProductRegistration onBack={() => { window.location.hash = '#sellers'; }} />;
+    if (!user) {
+      // Remember where the visitor wanted to go so we can redirect after login
+      sessionStorage.setItem('redirectAfterLogin', currentHash);
+      window.location.hash = '#auth';
+      return <Auth />;
     }
-    if (currentHash.startsWith('#seller/products/edit/')) {
-      const productId = currentHash.replace('#seller/products/edit/', '');
-      const product = MOCK_PRODUCTS.find(p => p.id === productId);
-      return <ProductRegistration onBack={() => { window.location.hash = '#sellers'; }} initialProduct={product} />;
-    }
-    // Investor portal — footer-only link, must be checked before role-based conditions
-    if (currentHash === '#investors') {
-      return <InvestorDashboard />;
-    }
-    // Página de Moda
+    return element;
+  };
+
+  const renderContent = () => {
+    // ── Public routes (no login required) ─────────────────────────────────────
+    if (currentHash === '#auth') return <Auth />;
+    if (currentHash.startsWith('#marketplace') || currentHash === '') return <Marketplace />;
+    if (currentHash.startsWith('#category/')) return <CategoryPage slug={currentHash.replace('#category/', '')} />;
     if (currentHash.startsWith('#moda')) {
-      const subPath = currentHash.substring(5); // remove '#moda'
+      const subPath = currentHash.substring(5);
       const subcategory = subPath.startsWith('/') ? subPath.substring(1) : 'all';
       return <FashionCategoryPage subcategory={subcategory || 'all'} />;
     }
-    // Category pages
-    if (currentHash.startsWith('#category/')) {
-      const slug = currentHash.replace('#category/', '');
-      return <CategoryPage slug={slug} />;
+    if (currentHash.startsWith('#product/')) return <ProductDetail productId={currentHash.replace('#product/', '')} />;
+    if (currentHash.startsWith('#seller/') && !currentHash.includes('products')) {
+      return <SellerProfile sellerId={currentHash.replace('#seller/', '')} onBack={() => { window.location.hash = '#marketplace'; }} />;
     }
-
-    // Product Detail Page
-    if (currentHash.startsWith('#product/')) {
-      const id = currentHash.replace('#product/', '');
-      return <ProductDetail productId={id} />;
-    }
-
-    // Customer Portal (Minha Conta)
-    if (currentHash.startsWith('#customer')) {
-      return <CustomerPortal />;
-    }
-
-    // Order Success
-    if (currentHash === '#order-success') {
-      return <OrderSuccess />;
-    }
-
-    // Track Order
-    if (currentHash === '#track-order') {
-      return <TrackOrder />;
-    }
-
-    // Rewards Page
-    if (currentHash === '#rewards') {
-      return <RewardsPage />;
-    }
-
-    // Auth Page
-    if (currentHash === '#auth') {
-      return <Auth />;
-    }
-
-    // Search Page
     if (currentHash.startsWith('#search')) {
-      const urlParams = new URLSearchParams(currentHash.split('?')[1] || '');
-      const query = urlParams.get('q') || '';
+      const query = new URLSearchParams(currentHash.split('?')[1] || '').get('q') || '';
       return <SearchPage query={query} />;
     }
-    if (currentHash.startsWith('#marketplace') || currentHash === '' || activeRole === UserRole.BUYER) {
-      return <Marketplace />;
+    if (currentHash === '#investors') return <InvestorDashboard />;
+    if (currentHash === '#track-order') return <TrackOrder />;
+
+    // ── Protected routes (login required) ─────────────────────────────────────
+    if (currentHash === '#checkout') return requireAuth(<Checkout />);
+    if (currentHash.startsWith('#customer')) return requireAuth(<CustomerPortal />);
+    if (currentHash === '#order-success') return requireAuth(<OrderSuccess />);
+    if (currentHash === '#rewards') return requireAuth(<RewardsPage />);
+    if (currentHash === '#sellers' || activeRole === UserRole.SELLER) return requireAuth(<SellerDashboard />);
+    if (currentHash === '#seller/products/new') return requireAuth(<ProductRegistration onBack={() => { window.location.hash = '#sellers'; }} />);
+    if (currentHash.startsWith('#seller/products/edit/')) {
+      const productId = currentHash.replace('#seller/products/edit/', '');
+      const product = MOCK_PRODUCTS.find(p => p.id === productId);
+      return requireAuth(<ProductRegistration onBack={() => { window.location.hash = '#sellers'; }} initialProduct={product} />);
     }
-    if (currentHash === '#sellers' || activeRole === UserRole.SELLER) {
-      return <SellerDashboard />;
-    }
-    if (currentHash === '#wholesale' || activeRole === UserRole.WHOLESALE) {
-      return <WholesaleDashboard />;
-    }
+    if (currentHash === '#wholesale' || activeRole === UserRole.WHOLESALE) return <WholesaleDashboard />;
+
     return <Marketplace />;
   };
 
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Layout activeRole={activeRole} onRoleChange={handleRoleChange}>
+        <PageTransition transitionKey={currentHash}>
+          {renderContent()}
+        </PageTransition>
+      </Layout>
+      <CartSidebar />
+      <ChatWidget />
+      <ToastContainer />
+    </div>
+  );
+};
+
+// ── Root app — provides all contexts ─────────────────────────────────────────
+const App: React.FC = () => {
   return (
     <ToastProvider>
       <AuthProvider>
         <RewardsProvider>
           <CartProvider>
             <ChatProvider>
-              <div className="min-h-screen bg-slate-50">
-                <Layout activeRole={activeRole} onRoleChange={handleRoleChange}>
-                  <PageTransition transitionKey={currentHash}>
-                    {renderContent()}
-                  </PageTransition>
-                </Layout>
-                <CartSidebar />
-                <ChatWidget />
-                <ToastContainer />
-              </div>
+              <AppInner />
             </ChatProvider>
           </CartProvider>
         </RewardsProvider>

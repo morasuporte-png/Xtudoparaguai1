@@ -23,8 +23,11 @@ const Auth: React.FC = () => {
                     password,
                 });
                 if (error) throw error;
-                addToast('Bem-vindo de volta!', 'success');
-                window.location.hash = '#marketplace';
+                addToast('Bem-vindo de volta! 👋', 'success');
+                // Redirect to intended page or marketplace
+                const redirect = sessionStorage.getItem('redirectAfterLogin') || '#marketplace';
+                sessionStorage.removeItem('redirectAfterLogin');
+                window.location.hash = redirect;
             } else {
                 const { error } = await supabase.auth.signUp({
                     email,
