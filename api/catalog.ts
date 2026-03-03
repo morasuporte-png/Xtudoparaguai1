@@ -27,6 +27,122 @@ interface CatalogProduct {
     seller_id: string;       // Supabase user ID of the seller account
 }
 
+// ── Category normalization ────────────────────────────────────────────────────
+// Maps any supplier category string → exact category_name stored in the DB
+// The DB uses ilike '%filter%', so we store official names that contain the filter.
+const CATEGORY_NORMALIZE: Record<string, string> = {
+    // Celulares
+    'celulares': 'Celulares',
+    'celular': 'Celulares',
+    'smartphone': 'Celulares',
+    'smartphones': 'Celulares',
+    'telefone': 'Celulares',
+    'iphone': 'Celulares',
+    'samsung': 'Celulares',
+    'tablet': 'Celulares',
+    // Apple
+    'apple': 'Produtos Apple',
+    'mac': 'Produtos Apple',
+    'macbook': 'Produtos Apple',
+    'ipad': 'Produtos Apple',
+    'airpods': 'Produtos Apple',
+    // Games & Consoles
+    'games': 'Games & Consoles',
+    'game': 'Games & Consoles',
+    'console': 'Games & Consoles',
+    'consoles': 'Games & Consoles',
+    'playstation': 'Games & Consoles',
+    'xbox': 'Games & Consoles',
+    'nintendo': 'Games & Consoles',
+    'ps5': 'Games & Consoles',
+    // Notebook
+    'notebook': 'Notebook',
+    'notebooks': 'Notebook',
+    'laptop': 'Notebook',
+    'computador': 'Notebook',
+    // Perfumes Premium
+    'perfumes': 'Perfumes Premium',
+    'perfume': 'Perfumes Premium',
+    'fragrance': 'Perfumes Premium',
+    'cologne': 'Perfumes Premium',
+    // Relógios de Luxo
+    'relogios': 'Relógios de Luxo',
+    'relógios': 'Relógios de Luxo',
+    'relogio': 'Relógios de Luxo',
+    'rolex': 'Relógios de Luxo',
+    'watch': 'Relógios de Luxo',
+    // Drones
+    'drones': 'Drones',
+    'drone': 'Drones',
+    'dji': 'Drones',
+    'fpv': 'Drones',
+    // Áudio & Fones
+    'audio': 'Áudio & Fones',
+    'áudio': 'Áudio & Fones',
+    'fones': 'Áudio & Fones',
+    'headphone': 'Áudio & Fones',
+    'headphones': 'Áudio & Fones',
+    'earbuds': 'Áudio & Fones',
+    'caixa de som': 'Áudio & Fones',
+    'speaker': 'Áudio & Fones',
+    // Smartwatch & Wearables
+    'smartwatch': 'Smartwatch & Wearables',
+    'smart watch': 'Smartwatch & Wearables',
+    'wearable': 'Smartwatch & Wearables',
+    'wearables': 'Smartwatch & Wearables',
+    'garmin': 'Smartwatch & Wearables',
+    // Câmeras & Foto
+    'cameras': 'Câmeras & Foto',
+    'câmeras': 'Câmeras & Foto',
+    'camera': 'Câmeras & Foto',
+    'câmera': 'Câmeras & Foto',
+    'foto': 'Câmeras & Foto',
+    'gopro': 'Câmeras & Foto',
+    // Casa & Eletrodomésticos
+    'casa': 'Casa & Eletrodomésticos',
+    'eletrodomesticos': 'Casa & Eletrodomésticos',
+    'eletrodomésticos': 'Casa & Eletrodomésticos',
+    'smart home': 'Casa & Eletrodomésticos',
+    'tv': 'Casa & Eletrodomésticos',
+    'televisao': 'Casa & Eletrodomésticos',
+    // Pet Shop
+    'pet': 'Pet Shop',
+    'pet shop': 'Pet Shop',
+    'cao': 'Pet Shop',
+    'cachorro': 'Pet Shop',
+    'gato': 'Pet Shop',
+    // Brinquedos & Kids
+    'brinquedos': 'Brinquedos & Kids',
+    'brinquedo': 'Brinquedos & Kids',
+    'infantil': 'Brinquedos & Kids',
+    'kids': 'Brinquedos & Kids',
+    'lego': 'Brinquedos & Kids',
+    'toys': 'Brinquedos & Kids',
+    // Moda
+    'moda feminina': 'Moda Feminina',
+    'feminino': 'Moda Feminina',
+    'moda masculina': 'Moda Masculina',
+    'masculino': 'Moda Masculina',
+    'moda infantil': 'Moda Infantil',
+    'moda bebe': 'Moda Bebê',
+    'moda bebê': 'Moda Bebê',
+    'bebe': 'Moda Bebê',
+    'bolsas': 'Bolsas & Acessórios',
+    'acessorios': 'Bolsas & Acessórios',
+    'malas': 'Malas & Viagem',
+    'viagem': 'Malas & Viagem',
+    'oculos': 'Óculos & Ótica',
+    'óculos': 'Óculos & Ótica',
+    'tenis': 'Tênis Importados',
+    'tênis': 'Tênis Importados',
+    'shoes': 'Tênis Importados',
+};
+
+function normalizeCategory(raw: string): string {
+    const key = raw.trim().toLowerCase();
+    return CATEGORY_NORMALIZE[key] ?? raw.trim(); // return as-is if not found
+}
+
 const supabase = createClient(
     process.env.VITE_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY!
@@ -108,7 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 description: p.description?.trim() ?? '',
                 price_brl: priceBRL,
                 compare_price_brl: Math.round(priceBRL * 1.25 * 100) / 100, // 25% compare price
-                category: p.category,
+                category_name: normalizeCategory(p.category ?? 'Celulares'),
                 brand: p.brand ?? '',
                 images: p.images,
                 stock: p.stock ?? 0,
