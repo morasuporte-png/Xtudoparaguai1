@@ -49,16 +49,30 @@ const SellerDashboard: React.FC = () => {
 
   const sellerDisplayName = sellerProfile?.full_name || user?.email?.split('@')[0] || 'Lojista';
 
+  // ── All hooks must be before early returns (React Rules of Hooks) ─────────
+  const [productSubTab, setProductSubTab] = useState<'active' | 'archived'>('active');
+  const { rooms, sendMessage, markAsRead } = useChat();
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const selectedRoom = useMemo(() => rooms.find(r => r.id === selectedRoomId), [rooms, selectedRoomId]);
+
   useEffect(() => {
-    if (!user) return;
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [selectedRoom?.messages]);
+
+  // Products useEffect — only runs when seller is verified
+  useEffect(() => {
+    if (!user || !isSellerVerified) return;
     async function fetchSellerProducts() {
       setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .eq('seller_id', user!.id); // Real authenticated seller ID
-
+          .eq('seller_id', user!.id);
         if (!error && data) {
           const transformed: Product[] = data.map((p: any) => ({
             id: p.id,
@@ -84,21 +98,199 @@ const SellerDashboard: React.FC = () => {
       }
     }
     fetchSellerProducts();
-  }, []);
+  }, [user, isSellerVerified]);
 
-  const [productSubTab, setProductSubTab] = useState<'active' | 'archived'>('active');
-  const { rooms, sendMessage, markAsRead } = useChat();
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const selectedRoom = useMemo(() => rooms.find(r => r.id === selectedRoomId), [rooms, selectedRoomId]);
+  const [regForm, setRegForm] = useState({
+    full_name: '',
+    document: '',   // CNPJ ou CPF
+    phone: '',
+    store_name: '',
+    store_description: '',
+  });
+  const [regLoading, setRegLoading] = useState(false);
+  const [regStep, setRegStep] = useState<1 | 2>(1);
 
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [selectedRoom?.messages]);
+  const isSellerVerified = sellerProfile !== null && sellerProfile.role === 'seller' && !!sellerProfile.store_name;
+  const profileLoaded = sellerProfile !== null || (user === null);
+
+  const handleSellerRegister = async () => {
+    if (!user) return;
+    setRegLoading(true);
+    const { upsertProfile: upsert } = await import('../services/db');
+    await upsert({
+      id: user.id,
+      role: 'seller',
+      full_name: regForm.full_name,
+      phone: regForm.phone,
+      store_name: regForm.store_name,
+      document: regForm.document,
+      store_description: regForm.store_description,
+    } as any);
+    // Refresh profile
+    const { getProfile: gp } = await import('../services/db');
+    const updated = await gp(user.id);
+    setSellerProfile(updated);
+    setRegLoading(false);
+  };
+
+  // Show onboarding gate while profile is loading or if seller not verified
+  if (!profileLoaded) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isSellerVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30 py-16 px-4">
+        <div className="max-w-2xl mx-auto">
+
+          {/* Hero */}
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 shadow-xl shadow-indigo-200">
+              🏪
+            </div>
+            <span className="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-4">
+              Tornando-se Lojista
+            </span>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight mb-4">
+              Complete seu cadastro<br /><span className="text-indigo-600">e comece a vender</span>
+            </h1>
+            <p className="text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
+              Preencha os dados abaixo para ativar seu painel de lojista e começar a vender no XTUDO Paraguai.
+            </p>
+          </div>
+
+          {/* Benefits */}
+          <div className="grid grid-cols-3 gap-4 mb-10">
+            {[
+              { icon: '🌎', title: 'Alcance Nacional', desc: 'Venda para todo o Brasil' },
+              { icon: '📦', title: 'Logística Integrada', desc: 'Rastreamento automático' },
+              { icon: '💸', title: 'Saque Rápido', desc: 'Repasse em até 7 dias' },
+            ].map(b => (
+              <div key={b.title} className="bg-white rounded-2xl border border-slate-100 p-4 text-center shadow-sm">
+                <p className="text-2xl mb-2">{b.icon}</p>
+                <p className="font-black text-slate-800 text-xs">{b.title}</p>
+                <p className="text-slate-400 text-[10px] mt-0.5">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Registration Card */}
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100/60 p-8 space-y-6">
+            {/* Step indicators */}
+            <div className="flex items-center gap-3 mb-2">
+              {[1, 2].map(s => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm transition-all ${regStep === s ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : regStep > s ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    {regStep > s ? '✓' : s}
+                  </div>
+                  <span className={`text-xs font-bold ${regStep === s ? 'text-slate-800' : 'text-slate-400'}`}>
+                    {s === 1 ? 'Dados Pessoais' : 'Dados da Loja'}
+                  </span>
+                  {s < 2 && <div className="w-8 h-px bg-slate-200 ml-1" />}
+                </div>
+              ))}
+            </div>
+
+            {regStep === 1 && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo *</label>
+                    <input
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={regForm.full_name}
+                      onChange={e => setRegForm(f => ({ ...f, full_name: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CNPJ / CPF *</label>
+                    <input
+                      type="text"
+                      placeholder="00.000.000/0001-00"
+                      value={regForm.document}
+                      onChange={e => setRegForm(f => ({ ...f, document: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone / WhatsApp *</label>
+                    <input
+                      type="text"
+                      placeholder="(11) 99999-9999"
+                      value={regForm.phone}
+                      onChange={e => setRegForm(f => ({ ...f, phone: e.target.value }))}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => setRegStep(2)}
+                  disabled={!regForm.full_name || !regForm.document || !regForm.phone}
+                  className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Próximo →
+                </button>
+              </div>
+            )}
+
+            {regStep === 2 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Loja *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: TechShop Paraguai"
+                    value={regForm.store_name}
+                    onChange={e => setRegForm(f => ({ ...f, store_name: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição da Loja</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Descreva o que sua loja vende, diferenciais, etc."
+                    value={regForm.store_description}
+                    onChange={e => setRegForm(f => ({ ...f, store_description: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                  />
+                </div>
+
+                {/* Terms */}
+                <div className="bg-slate-50 rounded-2xl p-4 text-xs text-slate-500 font-medium leading-relaxed">
+                  📋 Ao se cadastrar como lojista, você concorda em seguir as políticas do marketplace XTUDO, manter estoque atualizado e garantir a entrega dos produtos dentro do prazo informado.
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setRegStep(1)}
+                    className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all"
+                  >
+                    ← Voltar
+                  </button>
+                  <button
+                    onClick={handleSellerRegister}
+                    disabled={regLoading || !regForm.store_name}
+                    className="flex-2 flex-grow-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:opacity-90 transition-all active:scale-95 disabled:opacity-40"
+                  >
+                    {regLoading ? '⏳ Ativando sua loja...' : '🚀 Ativar Painel de Lojista'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   const handleSendReply = (e: React.FormEvent) => {
     e.preventDefault();

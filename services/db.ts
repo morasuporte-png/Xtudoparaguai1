@@ -32,6 +32,9 @@ export interface DbProfile {
     phone: string | null;
     role: 'buyer' | 'seller';
     avatar_url: string | null;
+    store_name: string | null;
+    document: string | null;
+    store_description: string | null;
 }
 
 export interface DbAddress {
