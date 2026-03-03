@@ -27,11 +27,13 @@ const Auth: React.FC = () => {
     const handleGoogleLogin = async () => {
         setGoogleLoading(true);
         try {
-            const redirect = sessionStorage.getItem('redirectAfterLogin') || '#marketplace';
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/${redirect}`,
+                    // Always redirect back to production so Google/Supabase OAuth works.
+                    // After the OAuth exchange, onAuthStateChange in AuthContext
+                    // will pick up the session and navigate to #marketplace.
+                    redirectTo: 'https://xtudoparaguai.com',
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
