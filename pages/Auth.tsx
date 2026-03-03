@@ -30,10 +30,9 @@ const Auth: React.FC = () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    // Always redirect back to production so Google/Supabase OAuth works.
-                    // After the OAuth exchange, onAuthStateChange in AuthContext
-                    // will pick up the session and navigate to #marketplace.
-                    redirectTo: 'https://xtudoparaguai.com',
+                    // Usa a origin atual (localhost em dev, xtudoparaguai.com em produção)
+                    // O Supabase precisa ter ambas as URLs em "Redirect URLs" no dashboard
+                    redirectTo: `${window.location.origin}`,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
