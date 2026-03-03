@@ -35,6 +35,7 @@ import SellersVerificados from './pages/SellersVerificados';
 import SobreNos from './pages/SobreNos';
 import Carreiras from './pages/Carreiras';
 import Contato from './pages/Contato';
+import CatalogIntegration from './pages/CatalogIntegration';
 
 // ── Inner app — has access to AuthContext ─────────────────────────────────────
 const AppInner: React.FC = () => {
@@ -110,6 +111,7 @@ const AppInner: React.FC = () => {
     if (currentHash === '#sobre-nos') return <SobreNos />;
     if (currentHash === '#carreiras') return <Carreiras />;
     if (currentHash === '#contato') return <Contato />;
+    if (currentHash === '#catalogo') return <CatalogIntegration />;
 
     // ── Protected routes (login required) ─────────────────────────────────────
     if (currentHash === '#checkout') return requireAuth(<Checkout />);
