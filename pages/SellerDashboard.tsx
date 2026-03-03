@@ -5,6 +5,8 @@ import { MOCK_PRODUCTS } from '../constants';
 import { getProductOptimizationSuggestion } from '../services/geminiService';
 import { useChat, ChatRoom } from '../context/ChatContext';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { getProfile, DbProfile } from '../services/db';
 import { Product } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,15 +39,25 @@ const SellerDashboard: React.FC = () => {
   const [productSearch, setProductSearch] = useState('');
   const [myProducts, setMyProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const [sellerProfile, setSellerProfile] = useState<DbProfile | null>(null);
+
+  // Fetch seller profile
+  useEffect(() => {
+    if (user) getProfile(user.id).then(setSellerProfile);
+  }, [user]);
+
+  const sellerDisplayName = sellerProfile?.full_name || user?.email?.split('@')[0] || 'Lojista';
 
   useEffect(() => {
+    if (!user) return;
     async function fetchSellerProducts() {
       setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .eq('seller_id', 's1'); // Mock seller ID
+          .eq('seller_id', user!.id); // Real authenticated seller ID
 
         if (!error && data) {
           const transformed: Product[] = data.map((p: any) => ({
@@ -636,8 +648,8 @@ const SellerDashboard: React.FC = () => {
           ].map(p => (
             <div key={p.rank} className="flex items-center gap-4">
               <span className={`text-xs font-black w-6 text-center ${p.rank === 1 ? 'text-amber-500' :
-                  p.rank === 2 ? 'text-slate-400' :
-                    p.rank === 3 ? 'text-amber-700' : 'text-slate-300'
+                p.rank === 2 ? 'text-slate-400' :
+                  p.rank === 3 ? 'text-amber-700' : 'text-slate-300'
                 }`}>#{p.rank}</span>
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
@@ -694,17 +706,12 @@ const SellerDashboard: React.FC = () => {
         <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest shadow-sm shadow-indigo-200">Platinum Seller</span>
+              <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest shadow-sm shadow-indigo-200">Painel do Lojista</span>
               <span className="text-slate-300">•</span>
-              <span className="text-xs text-slate-500 font-bold flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                </svg>
-                Ciudad del Este, PY
-              </span>
+              <span className="text-xs text-slate-500 font-bold">{user?.email ?? ''}</span>
             </div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Jorge Tech <span className="text-indigo-600">Dashboard</span></h1>
-            <p className="text-slate-500 font-medium">Bem-vindo de volta, você alcançou <span className="text-emerald-500 font-black">98%</span> das metas mensais.</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">{sellerDisplayName} <span className="text-indigo-600">Dashboard</span></h1>
+            <p className="text-slate-500 font-medium">Bem-vindo de volta, <span className="text-indigo-600 font-black">{sellerDisplayName}</span>! Gerencie sua loja e produtos.</p>
           </div>
 
           <div className="bg-white border-2 border-slate-100 rounded-3xl p-1 shadow-sm flex items-center overflow-x-auto">
