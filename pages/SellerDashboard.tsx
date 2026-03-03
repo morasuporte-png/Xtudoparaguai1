@@ -41,17 +41,22 @@ const SellerDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const [sellerProfile, setSellerProfile] = useState<DbProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Fetch seller profile
+  // Fetch seller profile — mark done even if profile doesn't exist yet
   useEffect(() => {
-    if (user) getProfile(user.id).then(setSellerProfile);
+    if (!user) { setProfileLoading(false); return; }
+    getProfile(user.id).then(data => {
+      setSellerProfile(data);
+      setProfileLoading(false);
+    });
   }, [user]);
 
   const sellerDisplayName = sellerProfile?.full_name || user?.email?.split('@')[0] || 'Lojista';
 
   // ── Gate conditions (computed before hooks that depend on them) ─────────────
   const isSellerVerified = !!(sellerProfile?.role === 'seller' && sellerProfile?.store_name);
-  const profileLoaded = sellerProfile !== null || user === null;
+
 
   // ── Registration form state ─────────────────────────────────────────────────
   const [regForm, setRegForm] = useState({ full_name: '', document: '', phone: '', store_name: '', store_description: '' });
@@ -123,7 +128,8 @@ const SellerDashboard: React.FC = () => {
 
 
   // ── GATE: Loading spinner ───────────────────────────────────────────────────
-  if (!profileLoaded) return (
+  if (profileLoading) return (
+
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
       <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
     </div>
