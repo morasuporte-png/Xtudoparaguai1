@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useChat } from '../context/ChatContext';
 import { useRewards, TIER_COLORS } from '../context/RewardsContext';
 import { useAuth } from '../context/AuthContext';
-import { getUserOrders, getProfile, upsertProfile, DbOrder, DbProfile } from '../services/db';
+import { getUserOrders, getProfile, upsertProfile, getAddresses, upsertAddress, deleteAddress, DbOrder, DbProfile, DbAddress } from '../services/db';
 
 type PortalTab = 'orders' | 'profile' | 'addresses' | 'wishlist' | 'conversations' | 'rewards';
 
@@ -21,6 +21,14 @@ const CustomerPortal: React.FC = () => {
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [savingProfile, setSavingProfile] = useState(false);
 
+    // Address state
+    const emptyAddr: DbAddress = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
+    const [addresses, setAddresses] = useState<DbAddress[]>([]);
+    const [addrForm, setAddrForm] = useState<DbAddress>(emptyAddr);
+    const [savingAddr, setSavingAddr] = useState(false);
+    const [cepLoading, setCepLoading] = useState(false);
+    const [showAddrForm, setShowAddrForm] = useState(false);
+
     useEffect(() => {
         if (!user) return;
         setLoadingOrders(true);
@@ -31,6 +39,7 @@ const CustomerPortal: React.FC = () => {
                 setProfileForm({ full_name: data.full_name ?? '', phone: data.phone ?? '' });
             }
         });
+        getAddresses(user.id).then(setAddresses);
     }, [user]);
 
     const handleSaveProfile = async () => {
@@ -165,6 +174,204 @@ const CustomerPortal: React.FC = () => {
                 className="mt-12 bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60">
                 {savingProfile ? 'Salvando...' : 'Salvar Alterações'}
             </button>
+        </div>
+    );
+
+    const handleCepSearch = async (cep: string) => {
+        const cleaned = cep.replace(/\D/g, '');
+        setAddrForm(f => ({ ...f, cep }));
+        if (cleaned.length === 8) {
+            setCepLoading(true);
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    setAddrForm(f => ({
+                        ...f,
+                        street: data.logradouro ?? '',
+                        neighborhood: data.bairro ?? '',
+                        city: data.localidade ?? '',
+                        state: data.uf ?? '',
+                    }));
+                }
+            } catch { }
+            setCepLoading(false);
+        }
+    };
+
+    const handleSaveAddress = async () => {
+        if (!user) return;
+        setSavingAddr(true);
+        const ok = await upsertAddress(user.id, addrForm);
+        if (ok) {
+            const updated = await getAddresses(user.id);
+            setAddresses(updated);
+            setAddrForm(emptyAddr);
+            setShowAddrForm(false);
+        }
+        setSavingAddr(false);
+    };
+
+    const handleDeleteAddress = async (id: string) => {
+        if (!user) return;
+        await deleteAddress(id);
+        setAddresses(prev => prev.filter(a => a.id !== id));
+    };
+
+    const RenderAddresses = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Endereços</h2>
+                    <p className="text-sm text-slate-400 font-medium mt-1">Gerencie seus endereços de entrega</p>
+                </div>
+                <button
+                    onClick={() => { setShowAddrForm(v => !v); setAddrForm(emptyAddr); }}
+                    className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    {showAddrForm ? 'Cancelar' : 'Novo Endereço'}
+                </button>
+            </div>
+
+            {/* Form */}
+            {showAddrForm && (
+                <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 space-y-6">
+                    <h3 className="font-black text-slate-900">Novo Endereço</h3>
+
+                    {/* CEP */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CEP *</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="00000-000"
+                                    maxLength={9}
+                                    value={addrForm.cep}
+                                    onChange={e => handleCepSearch(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                />
+                                {cepLoading && (
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rua / Logradouro *</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: Rua das Flores"
+                                value={addrForm.street}
+                                onChange={e => setAddrForm(f => ({ ...f, street: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número *</label>
+                            <input
+                                type="text"
+                                placeholder="123"
+                                value={addrForm.number}
+                                onChange={e => setAddrForm(f => ({ ...f, number: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Complemento</label>
+                            <input
+                                type="text"
+                                placeholder="Apto 42, Bloco B"
+                                value={addrForm.complement ?? ''}
+                                onChange={e => setAddrForm(f => ({ ...f, complement: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                            <input
+                                type="text"
+                                placeholder="Centro"
+                                value={addrForm.neighborhood ?? ''}
+                                onChange={e => setAddrForm(f => ({ ...f, neighborhood: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade *</label>
+                            <input
+                                type="text"
+                                placeholder="São Paulo"
+                                value={addrForm.city}
+                                onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado *</label>
+                            <select
+                                value={addrForm.state}
+                                onChange={e => setAddrForm(f => ({ ...f, state: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            >
+                                <option value="">Selecione</option>
+                                {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
+                                    <option key={uf} value={uf}>{uf}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleSaveAddress}
+                        disabled={savingAddr || !addrForm.cep || !addrForm.street || !addrForm.number || !addrForm.city || !addrForm.state}
+                        className="bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {savingAddr ? 'Salvando...' : '💾 Salvar Endereço'}
+                    </button>
+                </div>
+            )}
+
+            {/* Saved addresses list */}
+            {addresses.length === 0 && !showAddrForm ? (
+                <div className="bg-white rounded-[40px] border border-slate-100 p-16 text-center">
+                    <p className="text-4xl mb-4">📍</p>
+                    <h3 className="text-xl font-black text-slate-900 mb-2">Nenhum endereço salvo</h3>
+                    <p className="text-slate-400 font-medium text-sm">Adicione um endereço para facilitar suas compras.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {addresses.map(addr => (
+                        <div key={addr.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
+                                <div>
+                                    <p className="font-black text-slate-900 text-sm">
+                                        {addr.street}, {addr.number}{addr.complement ? `, ${addr.complement}` : ''}
+                                    </p>
+                                    {addr.neighborhood && <p className="text-xs text-slate-500 font-medium mt-0.5">{addr.neighborhood}</p>}
+                                    <p className="text-xs text-slate-500 font-medium">{addr.city} — {addr.state} · CEP {addr.cep}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => addr.id && handleDeleteAddress(addr.id)}
+                                className="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all flex-shrink-0"
+                                title="Remover endereço"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 
@@ -311,7 +518,7 @@ const CustomerPortal: React.FC = () => {
                     {activeTab === 'orders' && <RenderOrders />}
                     {activeTab === 'rewards' && <RenderRewards />}
                     {activeTab === 'profile' && <RenderProfile />}
-                    {activeTab === 'addresses' && <RenderProfile />}
+                    {activeTab === 'addresses' && <RenderAddresses />}
                     {activeTab === 'wishlist' && <RenderOrders />}
                     {activeTab === 'conversations' && <RenderConversations />}
                 </main>

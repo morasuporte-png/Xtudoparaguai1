@@ -34,6 +34,19 @@ export interface DbProfile {
     avatar_url: string | null;
 }
 
+export interface DbAddress {
+    id?: string;
+    user_id?: string;
+    cep: string;
+    street: string;
+    number: string;
+    complement?: string | null;
+    neighborhood?: string | null;
+    city: string;
+    state: string;
+    created_at?: string;
+}
+
 export interface DbProduct {
     id?: string;
     seller_id: string;
@@ -168,6 +181,36 @@ export async function getProfile(userId: string): Promise<DbProfile | null> {
 export async function upsertProfile(profile: Partial<DbProfile> & { id: string }) {
     const { error } = await supabase.from('profiles').upsert(profile);
     if (error) console.error('upsertProfile error:', error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADDRESSES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Busca todos os endereços do usuário */
+export async function getAddresses(userId: string): Promise<DbAddress[]> {
+    const { data, error } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    if (error) { console.error('getAddresses error:', error); return []; }
+    return data ?? [];
+}
+
+/** Cria ou atualiza um endereço */
+export async function upsertAddress(userId: string, address: DbAddress): Promise<boolean> {
+    const payload = { ...address, user_id: userId };
+    const { error } = await supabase.from('addresses').upsert(payload);
+    if (error) { console.error('upsertAddress error:', error); return false; }
+    return true;
+}
+
+/** Remove um endereço pelo id */
+export async function deleteAddress(addressId: string): Promise<boolean> {
+    const { error } = await supabase.from('addresses').delete().eq('id', addressId);
+    if (error) { console.error('deleteAddress error:', error); return false; }
+    return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
