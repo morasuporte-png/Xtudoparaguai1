@@ -9,7 +9,7 @@ import { Product } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type SellerTab = 'resume' | 'products' | 'orders' | 'messages' | 'logistics' | 'financial';
+type SellerTab = 'resume' | 'products' | 'orders' | 'messages' | 'logistics' | 'financial' | 'analytics';
 
 const salesData = [
   { day: 'Seg', sales: 4200 },
@@ -612,6 +612,79 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 
+  const RenderAnalytics = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <DashboardCard title="Vendas (Mês)" value="R$ 127.420" change={18} icon="📈" />
+        <DashboardCard title="Total de Pedidos" value="342" change={9} icon="🛒" />
+        <DashboardCard title="Ticket Médio" value="R$ 372" change={5} icon="🎯" />
+        <DashboardCard title="Taxa de Conversão" value="4.8%" change={-1} icon="🔄" />
+      </div>
+
+      {/* Top Products */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+        <h3 className="font-black text-slate-900 text-lg mb-6 flex items-center gap-2">
+          🏆 Produtos Mais Vendidos
+        </h3>
+        <div className="space-y-4">
+          {[
+            { rank: 1, name: 'iPhone 15 Pro 256GB', sold: 48, revenue: 'R$ 329.520', pct: 85 },
+            { rank: 2, name: 'Samsung Galaxy S24 Ultra', sold: 31, revenue: 'R$ 186.000', pct: 62 },
+            { rank: 3, name: 'AirPods Pro 2ª Geração', sold: 27, revenue: 'R$ 59.400', pct: 54 },
+            { rank: 4, name: 'PlayStation 5 Slim', sold: 19, revenue: 'R$ 114.000', pct: 38 },
+            { rank: 5, name: 'DJI Mini 4 Pro', sold: 14, revenue: 'R$ 97.580', pct: 28 },
+          ].map(p => (
+            <div key={p.rank} className="flex items-center gap-4">
+              <span className={`text-xs font-black w-6 text-center ${p.rank === 1 ? 'text-amber-500' :
+                  p.rank === 2 ? 'text-slate-400' :
+                    p.rank === 3 ? 'text-amber-700' : 'text-slate-300'
+                }`}>#{p.rank}</span>
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-bold text-slate-800">{p.name}</span>
+                  <span className="text-xs font-black text-slate-500">{p.sold} vendas</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700"
+                    style={{ width: `${p.pct}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-xs font-black text-emerald-600 w-24 text-right">{p.revenue}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sales chart from last 30 days */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+        <h3 className="font-black text-slate-900 text-lg mb-6">📅 Vendas — Últimos 30 Dias</h3>
+        <div className="h-[250px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={[
+              { day: '1', sales: 2100 }, { day: '5', sales: 3800 }, { day: '10', sales: 5100 },
+              { day: '15', sales: 4400 }, { day: '20', sales: 7200 }, { day: '25', sales: 6900 },
+              { day: '30', sales: 9100 },
+            ]}>
+              <defs>
+                <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.12} />
+                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} dy={8} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,.08)' }} formatter={(v: any) => [`R$ ${v.toLocaleString()}`, 'Vendas']} />
+              <Area type="monotone" dataKey="sales" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorA)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+
   // ─── Main Render ─────────────────────────────────────────────────────────────
 
   return (
@@ -635,13 +708,13 @@ const SellerDashboard: React.FC = () => {
           </div>
 
           <div className="bg-white border-2 border-slate-100 rounded-3xl p-1 shadow-sm flex items-center overflow-x-auto">
-            {(['resume', 'products', 'orders', 'messages', 'logistics', 'financial'] as SellerTab[]).map(tab => (
+            {(['resume', 'products', 'orders', 'messages', 'logistics', 'financial', 'analytics'] as SellerTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-5 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-tighter whitespace-nowrap ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
               >
-                {tab === 'resume' ? 'Resumo' : tab === 'products' ? 'Produtos' : tab === 'orders' ? 'Pedidos' : tab === 'messages' ? 'Mensagens' : tab === 'logistics' ? 'Envios' : 'Financeiro'}
+                {tab === 'resume' ? 'Resumo' : tab === 'products' ? 'Produtos' : tab === 'orders' ? 'Pedidos' : tab === 'messages' ? 'Mensagens' : tab === 'logistics' ? 'Envios' : tab === 'financial' ? 'Financeiro' : 'Analytics'}
               </button>
             ))}
           </div>
@@ -654,7 +727,8 @@ const SellerDashboard: React.FC = () => {
           {activeTab === 'orders' && <RenderOrders />}
           {activeTab === 'messages' && <RenderMessages />}
           {activeTab === 'financial' && <RenderFinancial />}
-          {activeTab === 'logistics' && <RenderOrders />} {/* Mocking logistics with same order UI for now */}
+          {activeTab === 'logistics' && <RenderOrders />}
+          {activeTab === 'analytics' && <RenderAnalytics />}
         </main>
       </div>
     </div>

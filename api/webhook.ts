@@ -63,14 +63,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const buyerName = (orderData as any)?.profiles?.full_name ?? 'Cliente';
 
                     if (buyerEmail) {
+                        // Build WhatsApp pre-filled message link
+                        const items = (orderData as any)?.order_items ?? [];
+                        const itemsSummary = items.map((i: any) => `• ${i.quantity}x ${i.title}`).join('\n');
+                        const total = (orderData as any)?.total_brl ?? 0;
+                        const waText = encodeURIComponent(
+                            `✅ Pedido *#${orderId.slice(0, 8)}* confirmado na XTUDO Paraguai!\n\n` +
+                            `*Itens:*\n${itemsSummary}\n\n` +
+                            `*Total:* R$ ${Number(total).toFixed(2)}\n\n` +
+                            `Acompanhe seu pedido: https://xtudoparaguai.com/#customer`
+                        );
+                        const whatsappLink = `https://wa.me/?text=${waText}`;
+
                         await sendOrderConfirmation({
                             to: buyerEmail,
                             order_id: orderId,
                             buyer_name: buyerName,
-                            items: (orderData as any)?.order_items ?? [],
-                            total: (orderData as any)?.total_brl ?? 0,
+                            items,
+                            total,
                             payment_method: (orderData as any)?.payment_method ?? 'pix',
                             address: 'Consulte seus dados de entrega no portal do cliente.',
+                            whatsapp_link: whatsappLink,
                         });
                     }
                 }

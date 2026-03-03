@@ -7,19 +7,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface EmailRequest {
-    to: string;
-    order_id: string;
-    buyer_name: string;
-    items: { title: string; quantity: number; unit_price: number; image_url?: string }[];
-    total: number;
-    payment_method: string;
-    tracking_code?: string;
-    address: string;
+  to: string;
+  order_id: string;
+  buyer_name: string;
+  items: { title: string; quantity: number; unit_price: number; image_url?: string }[];
+  total: number;
+  payment_method: string;
+  tracking_code?: string;
+  address: string;
+  whatsapp_link?: string;
 }
 
 function buildOrderEmail(data: EmailRequest): string {
-    const itemRows = data.items
-        .map(i => `
+  const itemRows = data.items
+    .map(i => `
           <tr>
             <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
               <strong style="display:block;color:#1e293b;font-size:14px;">${i.title}</strong>
@@ -30,15 +31,15 @@ function buildOrderEmail(data: EmailRequest): string {
             </td>
           </tr>
         `)
-        .join('');
+    .join('');
 
-    const paymentLabel: Record<string, string> = {
-        pix: '⚡ PIX',
-        credit_card: '💳 Cartão de Crédito',
-        boleto: '📄 Boleto Bancário',
-    };
+  const paymentLabel: Record<string, string> = {
+    pix: '⚡ PIX',
+    credit_card: '💳 Cartão de Crédito',
+    boleto: '📄 Boleto Bancário',
+  };
 
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -94,11 +95,15 @@ function buildOrderEmail(data: EmailRequest): string {
               </div>` : ''}
 
               <!-- CTA -->
-              <div style="text-align:center;margin-top:32px;">
+              <div style="text-align:center;margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
                 <a href="https://xtudoparaguai.vercel.app/#track-order"
                    style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:14px;padding:16px 32px;border-radius:14px;text-decoration:none;">
                   Rastrear Pedido →
                 </a>
+                ${data.whatsapp_link ? `<a href="${data.whatsapp_link}"
+                   style="display:inline-block;background:#25D366;color:#fff;font-weight:800;font-size:14px;padding:16px 24px;border-radius:14px;text-decoration:none;">
+                  📱 WhatsApp
+                </a>` : ''}
               </div>
             </td>
           </tr>
@@ -121,45 +126,45 @@ function buildOrderEmail(data: EmailRequest): string {
 }
 
 export async function sendOrderConfirmation(data: EmailRequest): Promise<boolean> {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-        console.warn('[email] RESEND_API_KEY não configurado. Email não enviado.');
-        return false;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY não configurado. Email não enviado.');
+    return false;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'XTudo Paraguai <noreply@xtudoparaguai.com>',
+        to: [data.to],
+        subject: `✅ Pedido #XT-${data.order_id.slice(0, 8).toUpperCase()} confirmado!`,
+        html: buildOrderEmail(data),
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('[email] Resend error:', err);
+      return false;
     }
 
-    try {
-        const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                from: 'XTudo Paraguai <noreply@xtudoparaguai.com>',
-                to: [data.to],
-                subject: `✅ Pedido #XT-${data.order_id.slice(0, 8).toUpperCase()} confirmado!`,
-                html: buildOrderEmail(data),
-            }),
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            console.error('[email] Resend error:', err);
-            return false;
-        }
-
-        console.log(`[email] Confirmação enviada para ${data.to}`);
-        return true;
-    } catch (err) {
-        console.error('[email] fetch error:', err);
-        return false;
-    }
+    console.log(`[email] Confirmação enviada para ${data.to}`);
+    return true;
+  } catch (err) {
+    console.error('[email] fetch error:', err);
+    return false;
+  }
 }
 
 // Rota para testes manuais: POST /api/email
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const success = await sendOrderConfirmation(req.body as EmailRequest);
-    return res.status(success ? 200 : 500).json({ sent: success });
+  const success = await sendOrderConfirmation(req.body as EmailRequest);
+  return res.status(success ? 200 : 500).json({ sent: success });
 }
