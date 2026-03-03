@@ -15,7 +15,7 @@ import OrderSuccess from './pages/OrderSuccess';
 import TrackOrder from './pages/TrackOrder';
 import Checkout from './pages/Checkout';
 import SellerProfile from './pages/SellerProfile';
-import SearchPage from './pages/SearchPage';
+import SearchResults from './pages/SearchResults';
 import { MOCK_PRODUCTS } from './constants';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
@@ -36,6 +36,8 @@ import SobreNos from './pages/SobreNos';
 import Carreiras from './pages/Carreiras';
 import Contato from './pages/Contato';
 import CatalogIntegration from './pages/CatalogIntegration';
+import Wishlist from './pages/Wishlist';
+import { WishlistProvider } from './context/WishlistContext';
 
 // ── Inner app — has access to AuthContext ─────────────────────────────────────
 const AppInner: React.FC = () => {
@@ -97,10 +99,8 @@ const AppInner: React.FC = () => {
     if (currentHash.startsWith('#seller/') && !currentHash.includes('products')) {
       return <SellerProfile sellerId={currentHash.replace('#seller/', '')} onBack={() => { window.location.hash = '#marketplace'; }} />;
     }
-    if (currentHash.startsWith('#search')) {
-      const query = new URLSearchParams(currentHash.split('?')[1] || '').get('q') || '';
-      return <SearchPage query={query} />;
-    }
+    if (currentHash.startsWith('#search')) return <SearchResults />;
+    if (currentHash === '#wishlist') return requireAuth(<Wishlist />);
     if (currentHash === '#investors') return <InvestorDashboard />;
     if (currentHash === '#track-order') return <TrackOrder />;
     // Info pages
@@ -151,9 +151,11 @@ const App: React.FC = () => {
       <AuthProvider>
         <RewardsProvider>
           <CartProvider>
-            <ChatProvider>
-              <AppInner />
-            </ChatProvider>
+            <WishlistProvider>
+              <ChatProvider>
+                <AppInner />
+              </ChatProvider>
+            </WishlistProvider>
           </CartProvider>
         </RewardsProvider>
       </AuthProvider>

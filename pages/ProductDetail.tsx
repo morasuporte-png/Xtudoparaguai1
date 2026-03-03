@@ -2,9 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MOCK_PRODUCTS } from '../constants';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
+import { useWishlist } from '../context/WishlistContext';
 import { Product } from '../types';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { supabase } from '../services/supabaseClient';
+import ReviewSection from '../components/ReviewSection';
 
 interface ProductDetailProps {
     productId: string;
@@ -13,6 +15,7 @@ interface ProductDetailProps {
 const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
     const { addItem } = useCart();
     const { openChat } = useChat();
+    const { isWishlisted, toggleWishlist } = useWishlist();
     const [product, setProduct] = useState<Product>(MOCK_PRODUCTS[0]);
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -218,6 +221,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                         </svg>
                                     </button>
+                                    <button
+                                        onClick={() => toggleWishlist({ id: product.id, title: product.title, price_brl: product.priceBRL, images: product.images, seller_name: product.sellerName })}
+                                        className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90 ${isWishlisted(product.id) ? 'border-rose-300 bg-rose-50 text-rose-500' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-rose-200 hover:text-rose-400'}`}
+                                        title={isWishlisted(product.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill={isWishlisted(product.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -367,6 +379,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                         </div>
                     </div>
                 </div>
+                {/* Reviews */}
+                <ReviewSection productId={product.id} />
             </div>
         </div>
     );

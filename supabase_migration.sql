@@ -116,3 +116,33 @@ create table public.addresses (
 );
 alter table public.orders enable row level security;
 create policy "addresses_all" on public.addresses for all using (auth.uid() = user_id);
+
+-- ── 6. WISHLISTS ─────────────────────────────────────────────────
+create table if not exists public.wishlists (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users on delete cascade,
+  product_id  uuid not null,
+  created_at  timestamptz not null default now(),
+  unique (user_id, product_id)
+);
+alter table public.wishlists enable row level security;
+create policy "wishlists_all" on public.wishlists for all using (auth.uid() = user_id);
+
+-- ── 7. REVIEWS ───────────────────────────────────────────────────
+create table if not exists public.reviews (
+  id          uuid primary key default gen_random_uuid(),
+  product_id  uuid not null,
+  user_id     uuid not null references auth.users on delete cascade,
+  rating      smallint not null check (rating between 1 and 5),
+  comment     text,
+  created_at  timestamptz not null default now(),
+  unique (user_id, product_id)   -- 1 review per user per product
+);
+alter table public.reviews enable row level security;
+-- Anyone can read reviews
+create policy "reviews_select" on public.reviews for select using (true);
+-- Logged-in users can create/update/delete their own reviews
+create policy "reviews_insert" on public.reviews for insert with check (auth.uid() = user_id);
+create policy "reviews_update" on public.reviews for update using (auth.uid() = user_id);
+create policy "reviews_delete" on public.reviews for delete using (auth.uid() = user_id);
+
