@@ -479,19 +479,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
             {
               title: 'Plataforma',
               links: [
-                { label: 'Como funciona', href: '#' },
-                { label: 'Segurança & Trust', href: '#' },
-                { label: 'Logística', href: '#' },
+                { label: 'Como funciona', href: '#como-funciona' },
+                { label: 'Segurança & Trust', href: '#seguranca' },
+                { label: 'Logística', href: '#logistica' },
                 { label: 'Rastrear Pedido', href: '#track-order' },
-                { label: 'Sellers Verificados', href: '#' }
+                { label: 'Sellers Verificados', href: '#sellers-verificados' }
               ]
             },
             {
               title: 'Empresa',
               links: [
-                { label: 'Sobre nós', href: '#' },
-                { label: 'Carreiras', href: '#' },
-                { label: 'Contato', href: '#' }
+                { label: 'Sobre nós', href: '#sobre-nos' },
+                { label: 'Carreiras', href: '#carreiras' },
+                { label: 'Contato', href: '#contato' }
               ]
             },
           ].map(section => (

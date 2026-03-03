@@ -28,6 +28,13 @@ import ChatWidget from './components/ChatWidget';
 import RewardsPage from './pages/RewardsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Auth from './pages/Auth';
+import ComoFunciona from './pages/ComoFunciona';
+import SegurancaTrust from './pages/SegurancaTrust';
+import Logistica from './pages/Logistica';
+import SellersVerificados from './pages/SellersVerificados';
+import SobreNos from './pages/SobreNos';
+import Carreiras from './pages/Carreiras';
+import Contato from './pages/Contato';
 
 // ── Inner app — has access to AuthContext ─────────────────────────────────────
 const AppInner: React.FC = () => {
@@ -95,6 +102,14 @@ const AppInner: React.FC = () => {
     }
     if (currentHash === '#investors') return <InvestorDashboard />;
     if (currentHash === '#track-order') return <TrackOrder />;
+    // Info pages
+    if (currentHash === '#como-funciona') return <ComoFunciona />;
+    if (currentHash === '#seguranca') return <SegurancaTrust />;
+    if (currentHash === '#logistica') return <Logistica />;
+    if (currentHash === '#sellers-verificados') return <SellersVerificados />;
+    if (currentHash === '#sobre-nos') return <SobreNos />;
+    if (currentHash === '#carreiras') return <Carreiras />;
+    if (currentHash === '#contato') return <Contato />;
 
     // ── Protected routes (login required) ─────────────────────────────────────
     if (currentHash === '#checkout') return requireAuth(<Checkout />);
