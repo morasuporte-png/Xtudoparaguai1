@@ -843,44 +843,54 @@ const SellerDashboard: React.FC = () => {
   const handleCreateProduct = async () => {
     if (!user || !productForm.title || !productForm.price_brl) return;
     setProductSaving(true);
-    const result = await createProduct({
-      seller_id: user.id,
-      seller_name: sellerProfile?.full_name || sellerProfile?.store_name || user.email || 'Lojista',
-      title: productForm.title,
-      category_name: productForm.category_name,
-      description: productForm.description,
-      price_brl: Number(productForm.price_brl),
-      compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
-      stock: Number(productForm.stock) || 1,
-      images: await (async () => {
-        if (productImageFiles.length === 0) return [];
-        const urls: string[] = [];
-        for (const file of productImageFiles) {
-          const path = `${user.id}/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-          const { error: upErr } = await supabase.storage
-            .from('product-images')
-            .upload(path, file, { upsert: true });
-          if (!upErr) {
-            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-            if (urlData?.publicUrl) urls.push(urlData.publicUrl);
-          }
+    try {
+      // Fazer upload das fotos primeiro (se houver)
+      const imageUrls: string[] = [];
+      for (const file of productImageFiles) {
+        const path = `${user.id}/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        const { error: upErr } = await supabase.storage
+          .from('product-images')
+          .upload(path, file, { upsert: true });
+        if (upErr) {
+          console.warn('Falha no upload da imagem:', upErr.message);
+        } else {
+          const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+          if (urlData?.publicUrl) imageUrls.push(urlData.publicUrl);
         }
-        return urls;
-      })(),
-    });
-    setProductSaving(false);
-    if (result) {
-      setShowProductModal(false);
-      setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
-      setProductImageFiles([]);
-      // Refresh product list
-      const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
-      if (data) setMyProducts(data.map((p: any) => ({
-        id: p.id, sellerId: p.seller_id, sellerName: p.seller_name, category: p.category_name,
-        title: p.title, description: p.description, priceBRL: Number(p.price_brl),
-        comparePriceBRL: Number(p.compare_price_brl), stock: p.stock, rating: Number(p.rating),
-        images: p.images ?? [], specs: p.specs ?? [], isVerified: p.is_verified,
-      })));
+      }
+
+      const result = await createProduct({
+        seller_id: user.id,
+        title: productForm.title,
+        category_name: productForm.category_name,
+        description: productForm.description,
+        price_brl: Number(productForm.price_brl),
+        compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
+        stock: Number(productForm.stock) || 1,
+        images: imageUrls,
+      });
+
+      if (result) {
+        showToast('Produto publicado com sucesso! ✅', 'success', '📦');
+        setShowProductModal(false);
+        setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
+        setProductImageFiles([]);
+        // Atualizar lista de produtos
+        const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
+        if (data) setMyProducts(data.map((p: any) => ({
+          id: p.id, sellerId: p.seller_id, sellerName: p.seller_name ?? '', category: p.category,
+          title: p.title, description: p.description, priceBRL: Number(p.price_brl),
+          comparePriceBRL: Number(p.compare_price_brl || p.price_brl), stock: p.stock, rating: Number(p.rating ?? 0),
+          images: p.images ?? [], specs: p.specs ?? [], isVerified: p.is_verified,
+        })));
+      } else {
+        showToast('Falha ao publicar produto. Verifique o console.', 'error', '❌');
+      }
+    } catch (err: any) {
+      console.error('[handleCreateProduct]', err);
+      showToast(`Erro: ${err?.message ?? 'Tente novamente.'}`, 'error', '❌');
+    } finally {
+      setProductSaving(false);
     }
   };
 

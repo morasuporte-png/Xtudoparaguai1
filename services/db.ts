@@ -90,7 +90,6 @@ export interface DbProduct {
 /** Cria um produto no Supabase para o seller logado */
 export async function createProduct(params: {
     seller_id: string;
-    seller_name: string;
     title: string;
     category_name: string;
     description: string;
@@ -103,16 +102,14 @@ export async function createProduct(params: {
         .from('products')
         .insert({
             seller_id: params.seller_id,
-            seller_name: params.seller_name,
             title: params.title,
-            category_name: params.category_name,
+            category: params.category_name,   // tabela usa 'category'
             description: params.description,
             price_brl: params.price_brl,
-            compare_price_brl: params.compare_price_brl,
+            compare_price_brl: params.compare_price_brl || params.price_brl,
             stock: params.stock,
             images: params.images,
             is_active: true,
-            rating: 0,
         })
         .select('id')
         .single();
