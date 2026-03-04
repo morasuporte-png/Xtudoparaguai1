@@ -101,6 +101,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         },
                     });
 
+                    // 3. Enfileirar job para envio ao fornecedor (worker processa com retry)
+                    const { error: jobErr } = await supabase.from('job_queue').insert({
+                        job_type: 'SEND_TO_SUPPLIER',
+                        payload: { order_id: orderId, payment_id: paymentId },
+                        max_attempts: 5,
+                        run_at: new Date().toISOString(),
+                    });
+                    if (jobErr) {
+                        console.error('[webhook] falha ao criar job SEND_TO_SUPPLIER:', jobErr);
+                        await logOrderEvent({
+                            order_id: orderId,
+                            event_type: 'ERROR',
+                            success: false,
+                            error_message: `Falha ao enfileirar job: ${jobErr.message}`,
+                            payload: { context: 'enqueue_job' },
+                        });
+                    } else {
+                        console.log(`[webhook] job SEND_TO_SUPPLIER enfileirado para pedido ${orderId}`);
+                    }
+
                     // 3. Buscar dados do comprador para enviar o email
                     const buyerEmail = (payment.payer as any)?.email;
                     const buyerName = (orderData as any)?.profiles?.full_name ?? 'Cliente';
