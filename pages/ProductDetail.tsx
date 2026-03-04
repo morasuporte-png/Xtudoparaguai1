@@ -34,17 +34,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                     const transformed: Product = {
                         id: data.id,
                         sellerId: data.seller_id,
-                        sellerName: data.seller_name,
-                        category: data.category_name,
+                        sellerName: data.seller_name ?? '',
+                        category: data.category,          // coluna correta
                         title: data.title,
-                        description: data.description,
+                        description: data.description ?? '',
                         priceBRL: Number(data.price_brl),
-                        comparePriceBRL: Number(data.compare_price_brl),
-                        stock: data.stock,
-                        rating: Number(data.rating),
-                        images: data.images,
-                        specs: data.specs,
-                        isVerified: data.is_verified
+                        comparePriceBRL: Number(data.compare_price_brl || data.price_brl),
+                        stock: data.stock ?? 0,
+                        rating: Number(data.rating ?? 0),
+                        images: data.images ?? [],
+                        specs: data.specs ?? [],
+                        isVerified: data.is_verified ?? false
                     };
                     setProduct(transformed);
 
@@ -52,7 +52,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                     const { data: relatedData } = await supabase
                         .from('products')
                         .select('*')
-                        .eq('category_name', transformed.category)
+                        .eq('category', transformed.category)  // coluna correta
                         .neq('id', transformed.id)
                         .limit(4);
 
@@ -60,17 +60,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                         setRelatedProducts(relatedData.map((p: any) => ({
                             id: p.id,
                             sellerId: p.seller_id,
-                            sellerName: p.seller_name,
-                            category: p.category_name,
+                            sellerName: p.seller_name ?? '',
+                            category: p.category,               // coluna correta
                             title: p.title,
-                            description: p.description,
+                            description: p.description ?? '',
                             priceBRL: Number(p.price_brl),
-                            comparePriceBRL: Number(p.compare_price_brl),
-                            stock: p.stock,
-                            rating: Number(p.rating),
-                            images: p.images,
-                            specs: p.specs,
-                            isVerified: p.is_verified
+                            comparePriceBRL: Number(p.compare_price_brl || p.price_brl),
+                            stock: p.stock ?? 0,
+                            rating: Number(p.rating ?? 0),
+                            images: p.images ?? [],
+                            specs: p.specs ?? [],
+                            isVerified: p.is_verified ?? false
                         })));
                     }
                 }
