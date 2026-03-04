@@ -135,6 +135,33 @@ const SellerDashboard: React.FC = () => {
       : '—',
   }), [myProducts]);
 
+  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const hasSales = sellerOrders.length > 0;
+
+  useEffect(() => {
+    if (!user || !isSellerVerified) return;
+    const productIds = myProducts.map((p: any) => p.id);
+
+    const fetchOrders = async () => {
+      if (productIds.length === 0) { setSellerOrders([]); return; }
+      const { data: items } = await supabase
+        .from('order_items').select('order_id').in('product_id', productIds);
+      const orderIds = [...new Set((items || []).map((i: any) => i.order_id))];
+      if (orderIds.length === 0) { setSellerOrders([]); return; }
+      const { data: orders } = await supabase
+        .from('orders').select('id, status, total_brl, created_at, buyer_id')
+        .in('id', orderIds).order('created_at', { ascending: false });
+      setSellerOrders(orders || []);
+    };
+
+    fetchOrders();
+
+    const channel = supabase.channel(`seller-orders-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, fetchOrders)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, isSellerVerified, myProducts]);
+
   const handleArchive = (id: string) => setMyProducts(prev => prev.map(p => p.id === id ? { ...p, isArchived: !p.isArchived } : p));
   const handleDelete = (id: string) => { if (confirm('Excluir permanentemente?')) setMyProducts(prev => prev.filter(p => p.id !== id)); };
   const handleSendReply = (e: React.FormEvent) => {
@@ -482,125 +509,137 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 
-  const RenderOrders = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">A Enviar</p>
-          <p className="text-3xl font-black text-slate-900">08</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Em Trânsito</p>
-          <p className="text-3xl font-black text-blue-600">12</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Concluídos (Mês)</p>
-          <p className="text-3xl font-black text-emerald-500">142</p>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100 uppercase text-[9px] font-black text-slate-400 tracking-tighter">
-              <th className="px-6 py-4">Pedido / Data</th>
-              <th className="px-6 py-4">Cliente</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Total</th>
-              <th className="px-6 py-4 text-right">Ação</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {[
-              { id: '4291', buyer: 'Carla Silva', status: 'pago', date: 'Hoje, 14:20', total: 6890 },
-              { id: '4290', buyer: 'Marcos Oliveira', status: 'processando', date: 'Hoje, 11:05', total: 1280 },
-              { id: '4289', buyer: 'Ana Souza', status: 'enviado', date: 'Ontem', total: 3250 },
-              { id: '4288', buyer: 'Pedro Ferreira', status: 'pago', date: 'Ontem', total: 5900 },
-              { id: '4287', buyer: 'Juliana Lima', status: 'cancelado', date: '21 Fev', total: 120 },
-            ].map((order) => (
-              <tr key={order.id} className="hover:bg-slate-50/50">
-                <td className="px-6 py-4 text-xs font-bold">
-                  <span className="text-slate-800">#{order.id}</span>
-                  <p className="text-slate-400 font-medium">{order.date}</p>
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-700 text-sm">{order.buyer}</td>
-                <td className="px-6 py-4">
-                  <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${order.status === 'pago' ? 'bg-emerald-100 text-emerald-700' :
-                    order.status === 'enviado' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'cancelado' ? 'bg-rose-100 text-rose-700' :
-                        'bg-amber-100 text-amber-700'
-                    }`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-black text-slate-900 text-sm">R$ {order.total}</td>
-                <td className="px-6 py-4 text-right">
-                  <button className="text-indigo-600 font-black text-[10px] hover:underline">DETALHES</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const RenderFinancial = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[40px] p-10 text-white shadow-2xl shadow-emerald-200 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-20">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-40 w-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+  const RenderOrders = () => {
+    const toShip = sellerOrders.filter(o => o.status === 'paid' || o.status === 'pago').length;
+    const inTransit = sellerOrders.filter(o => o.status === 'enviado' || o.status === 'shipped').length;
+    const completed = sellerOrders.filter(o => o.status === 'entregue' || o.status === 'completed').length;
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">A Enviar</p>
+            <p className="text-3xl font-black text-slate-900">{toShip}</p>
           </div>
-          <p className="text-sm font-bold opacity-80 mb-2">Disponível para saque</p>
-          <h4 className="text-5xl font-black mb-10 tracking-tighter">R$ 14.820,50</h4>
-          <button className="w-full bg-white text-emerald-700 font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-50 transition-all active:scale-95">
-            Solicitar Saque PIX
-          </button>
-        </div>
-        <div className="bg-white rounded-[40px] border-2 border-slate-100 p-10 shadow-sm flex flex-col justify-between">
-          <div>
-            <p className="text-sm font-bold text-slate-400 mb-2">Lançamentos Futuros</p>
-            <h4 className="text-4xl font-black text-slate-900 tracking-tighter">R$ 27.680,22</h4>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Em Trânsito</p>
+            <p className="text-3xl font-black text-blue-600">{inTransit}</p>
           </div>
-          <div className="mt-8 pt-8 border-t border-slate-100">
-            <div className="flex justify-between items-center text-sm mb-4">
-              <span className="text-slate-500 font-medium">Próximo pagamento</span>
-              <span className="text-slate-900 font-black">28 de Fev</span>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Concluídos</p>
+            <p className="text-3xl font-black text-emerald-500">{completed}</p>
+          </div>
+        </div>
+
+        {!hasSales ? (
+          <div className="bg-white border border-slate-100 rounded-3xl p-16 text-center shadow-sm">
+            <p className="text-5xl mb-4">📦</p>
+            <h4 className="font-black text-slate-800 text-lg mb-2">Nenhum pedido ainda</h4>
+            <p className="text-slate-400 text-sm">Quando um cliente comprar um produto seu, o pedido aparecerá aqui em tempo real.</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100 uppercase text-[9px] font-black text-slate-400 tracking-tighter">
+                  <th className="px-6 py-4">Pedido / Data</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Total</th>
+                  <th className="px-6 py-4 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {sellerOrders.map(order => (
+                  <tr key={order.id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 text-xs font-bold">
+                      <span className="text-slate-800">#{order.id.slice(0, 8)}</span>
+                      <p className="text-slate-400 font-medium">{new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${['paid', 'pago'].includes(order.status) ? 'bg-emerald-100 text-emerald-700' :
+                        ['enviado', 'shipped'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
+                          ['cancelado', 'cancelled'].includes(order.status) ? 'bg-rose-100 text-rose-700' :
+                            'bg-amber-100 text-amber-700'
+                        }`}>{order.status}</span>
+                    </td>
+                    <td className="px-6 py-4 font-black text-slate-900 text-sm">R$ {Number(order.total_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-indigo-600 font-black text-[10px] hover:underline">DETALHES</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const RenderFinancial = () => {
+    const totalRevenue = sellerOrders
+      .filter(o => !['cancelado', 'cancelled'].includes(o.status))
+      .reduce((s: number, o: any) => s + Number(o.total_brl), 0);
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[40px] p-10 text-white shadow-2xl shadow-emerald-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-20">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-40 w-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Taxas e comissões (Mês)</span>
-              <span className="text-rose-500 font-bold">- R$ 3.420</span>
-            </div>
+            <p className="text-sm font-bold opacity-80 mb-2">Receita Total Acumulada</p>
+            <h4 className="text-5xl font-black mb-10 tracking-tighter">
+              {hasSales ? `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
+            </h4>
+            <button disabled={!hasSales} className="w-full bg-white text-emerald-700 font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+              Solicitar Saque PIX
+            </button>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <h3 className="text-lg font-bold text-slate-800 mb-6 font-primary">Histórico de Movimentações</h3>
-        <div className="space-y-4">
-          {[
-            { date: '22 Fev', desc: 'Venda Pedido #4291', value: 6890, type: 'plus' },
-            { date: '21 Fev', desc: 'Saque PIX Efetuado', value: 12000, type: 'minus' },
-            { date: '21 Fev', desc: 'Venda Pedido #4289', value: 3250, type: 'plus' },
-            { date: '20 Fev', desc: 'Taxa Publicidade Premium', value: 450, type: 'minus' },
-          ].map((move, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-400 w-12">{move.date}</span>
-                <p className="text-sm font-bold text-slate-700">{move.desc}</p>
+          <div className="bg-white rounded-[40px] border-2 border-slate-100 p-10 shadow-sm flex flex-col justify-between">
+            <div>
+              <p className="text-sm font-bold text-slate-400 mb-2">A Receber (pedidos pendentes)</p>
+              <h4 className="text-4xl font-black text-slate-900 tracking-tighter">
+                {hasSales ? `R$ ${sellerOrders.filter(o => ['paid', 'pago', 'processando'].includes(o.status)).reduce((s: number, o: any) => s + Number(o.total_brl), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
+              </h4>
+            </div>
+            <div className="mt-8 pt-8 border-t border-slate-100">
+              <div className="flex justify-between items-center text-sm mb-4">
+                <span className="text-slate-500 font-medium">Total de pedidos</span>
+                <span className="text-slate-900 font-black">{sellerOrders.length}</span>
               </div>
-              <p className={`text-sm font-black ${move.type === 'plus' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {move.type === 'plus' ? '+' : '-'} R$ {move.value.toLocaleString()}
-              </p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-medium">Cancelados</span>
+                <span className="text-rose-500 font-bold">{sellerOrders.filter(o => ['cancelado', 'cancelled'].includes(o.status)).length}</span>
+              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Histórico de Movimentações</h3>
+          {!hasSales ? (
+            <div className="text-center py-12">
+              <p className="text-4xl mb-3">💸</p>
+              <p className="text-slate-400 text-sm font-bold">Nenhuma movimentação ainda.<br />Suas vendas aparecerão aqui.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sellerOrders.slice(0, 6).map((o: any) => (
+                <div key={o.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-black text-slate-400 w-12">{new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                    <p className="text-sm font-bold text-slate-700">Venda #{o.id.slice(0, 8)}</p>
+                  </div>
+                  <p className="text-sm font-black text-emerald-500">+ R$ {Number(o.total_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const RenderMessages = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[650px] animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -745,78 +784,49 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 
-  const RenderAnalytics = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardCard title="Vendas (Mês)" value="R$ 127.420" change={18} icon="📈" />
-        <DashboardCard title="Total de Pedidos" value="342" change={9} icon="🛒" />
-        <DashboardCard title="Ticket Médio" value="R$ 372" change={5} icon="🎯" />
-        <DashboardCard title="Taxa de Conversão" value="4.8%" change={-1} icon="🔄" />
-      </div>
+  const RenderAnalytics = () => {
+    const totalRevenue = sellerOrders.reduce((s: number, o: any) => s + Number(o.total_brl), 0);
+    const avgTicket = sellerOrders.length > 0 ? totalRevenue / sellerOrders.length : 0;
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <DashboardCard title="Receita Total" value={hasSales ? `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'} icon="📈" />
+          <DashboardCard title="Total de Pedidos" value={String(sellerOrders.length)} icon="🛒" />
+          <DashboardCard title="Ticket Médio" value={hasSales ? `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'} icon="🎯" />
+          <DashboardCard title="Produtos" value={String(myProducts.length)} icon="📦" />
+        </div>
 
-      {/* Top Products */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
-        <h3 className="font-black text-slate-900 text-lg mb-6 flex items-center gap-2">
-          🏆 Produtos Mais Vendidos
-        </h3>
-        <div className="space-y-4">
-          {[
-            { rank: 1, name: 'iPhone 15 Pro 256GB', sold: 48, revenue: 'R$ 329.520', pct: 85 },
-            { rank: 2, name: 'Samsung Galaxy S24 Ultra', sold: 31, revenue: 'R$ 186.000', pct: 62 },
-            { rank: 3, name: 'AirPods Pro 2ª Geração', sold: 27, revenue: 'R$ 59.400', pct: 54 },
-            { rank: 4, name: 'PlayStation 5 Slim', sold: 19, revenue: 'R$ 114.000', pct: 38 },
-            { rank: 5, name: 'DJI Mini 4 Pro', sold: 14, revenue: 'R$ 97.580', pct: 28 },
-          ].map(p => (
-            <div key={p.rank} className="flex items-center gap-4">
-              <span className={`text-xs font-black w-6 text-center ${p.rank === 1 ? 'text-amber-500' :
-                p.rank === 2 ? 'text-slate-400' :
-                  p.rank === 3 ? 'text-amber-700' : 'text-slate-300'
-                }`}>#{p.rank}</span>
-              <div className="flex-1">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold text-slate-800">{p.name}</span>
-                  <span className="text-xs font-black text-slate-500">{p.sold} vendas</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700"
-                    style={{ width: `${p.pct}%` }}
-                  />
-                </div>
-              </div>
-              <span className="text-xs font-black text-emerald-600 w-24 text-right">{p.revenue}</span>
+        {!hasSales ? (
+          <div className="bg-white border border-slate-100 rounded-3xl p-20 text-center shadow-sm">
+            <p className="text-5xl mb-4">📊</p>
+            <h4 className="font-black text-slate-800 text-xl mb-2">Sem dados ainda</h4>
+            <p className="text-slate-400 text-sm max-w-sm mx-auto">Seus gráficos de performance e produtos mais vendidos aparecerão aqui assim que você realizar sua primeira venda.</p>
+            <button onClick={() => setActiveTab('products')} className="mt-6 bg-indigo-600 text-white font-black px-8 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Ver meus Produtos →</button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+            <h3 className="font-black text-slate-900 text-lg mb-6">Pedidos por Status</h3>
+            <div className="space-y-4">
+              {['✅ Pagos', '🚚 Enviados', '❌ Cancelados', '⏳ Processando'].map((label, i) => {
+                const statuses = [['paid', 'pago'], ['enviado', 'shipped'], ['cancelado', 'cancelled'], ['processando', 'processing']];
+                const count = sellerOrders.filter(o => statuses[i].includes(o.status)).length;
+                const pct = sellerOrders.length > 0 ? Math.round(count / sellerOrders.length * 100) : 0;
+                return (
+                  <div key={label} className="flex items-center gap-4">
+                    <span className="text-sm font-bold text-slate-600 w-32">{label}</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-sm font-black text-slate-800 w-8 text-right">{count}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* Sales chart from last 30 days */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
-        <h3 className="font-black text-slate-900 text-lg mb-6">📅 Vendas — Últimos 30 Dias</h3>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={[
-              { day: '1', sales: 2100 }, { day: '5', sales: 3800 }, { day: '10', sales: 5100 },
-              { day: '15', sales: 4400 }, { day: '20', sales: 7200 }, { day: '25', sales: 6900 },
-              { day: '30', sales: 9100 },
-            ]}>
-              <defs>
-                <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} dy={8} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,.08)' }} formatter={(v: any) => [`R$ ${v.toLocaleString()}`, 'Vendas']} />
-              <Area type="monotone" dataKey="sales" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorA)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // ─── Main Render ─────────────────────────────────────────────────────────────
 
