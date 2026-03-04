@@ -35,6 +35,7 @@ export interface DbProfile {
     store_name: string | null;
     document: string | null;
     store_description: string | null;
+    is_wholesaler: boolean | null;
 }
 
 export interface DbAddress {
