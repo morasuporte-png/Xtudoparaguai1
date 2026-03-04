@@ -202,8 +202,10 @@ const Checkout: React.FC = () => {
 
         try {
             // 1. Criar pedido no Supabase (status 'pending')
+            // UUID validation — produtos dos constants têm IDs numéricos, não UUIDs
+            const isUUID = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
             const orderItems = items.map(i => ({
-                product_id: i.product.id,
+                product_id: isUUID(String(i.product.id)) ? i.product.id : null,
                 title: i.product.title,
                 image_url: i.product.images[0] ?? '',
                 quantity: i.quantity,
@@ -236,7 +238,10 @@ const Checkout: React.FC = () => {
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error ?? 'Erro no servidor');
+            if (!res.ok) {
+                const detail = data.detail ? ` (${data.detail})` : '';
+                throw new Error((data.error ?? 'Erro no servidor') + detail);
+            }
 
             // 3. Tratar resposta por método de pagamento
             if (payment === 'pix') {
@@ -455,8 +460,8 @@ const Checkout: React.FC = () => {
                                                 key={opt.id}
                                                 onClick={() => setSelectedShipping(opt)}
                                                 className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 text-left transition-all ${selectedShipping?.id === opt.id
-                                                        ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
-                                                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                                                    ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                                                    : 'border-slate-200 bg-slate-50 hover:border-slate-300'
                                                     }`}
                                             >
                                                 <div>

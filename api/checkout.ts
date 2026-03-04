@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MercadoPagoConfig, Payment, PreApproval } from 'mercadopago';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 
 // Inicializa o cliente do Mercado Pago com o Access Token
 const client = new MercadoPagoConfig({
@@ -8,81 +8,100 @@ const client = new MercadoPagoConfig({
 
 interface CheckoutBody {
     items: { title: string; unit_price: number; quantity: number; picture_url?: string }[];
-    payer: { name: string; email: string; identification: { type: string; number: string } };
+    payer: { name: string; email: string; identification?: { type: string; number: string } };
     payment_method: 'pix' | 'credit_card' | 'boleto';
     total: number;
     description?: string;
+    external_reference?: string; // order_id::buyer_id — vínculo com a order do Supabase
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Apenas POST é aceito
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
         const body = req.body as CheckoutBody;
-        const { items, payer, payment_method, total } = body;
+        const { items, payer, payment_method, total, external_reference } = body;
 
-        // ── PIX ──────────────────────────────────────────────────────────
+        // Monta o objeto de identificação apenas se CPF for válido (11 dígitos)
+        const cpfClean = (payer.identification?.number ?? '').replace(/\D/g, '');
+        const identification = cpfClean.length === 11
+            ? { type: 'CPF', number: cpfClean }
+            : undefined;
+
+        const baseUrl = process.env.APP_URL
+            ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://xtudoparaguai.com');
+
+        // ── PIX ──────────────────────────────────────────────────────────────
         if (payment_method === 'pix') {
-            const payment = new Payment(client);
-            const response = await payment.create({
+            const paymentApi = new Payment(client);
+            const response = await paymentApi.create({
                 body: {
-                    transaction_amount: total,
+                    transaction_amount: Number(total),
                     description: items.map(i => i.title).join(', ').slice(0, 200),
                     payment_method_id: 'pix',
+                    external_reference: external_reference ?? '',  // ← vínculo com o pedido
                     payer: {
-                        email: payer.email,
-                        first_name: payer.name.split(' ')[0],
-                        last_name: payer.name.split(' ').slice(1).join(' '),
-                        identification: payer.identification,
+                        email: payer.email || 'cliente@xtudo.com',
+                        first_name: payer.name.split(' ')[0] || 'Cliente',
+                        last_name: payer.name.split(' ').slice(1).join(' ') || 'XTUDO',
+                        ...(identification ? { identification } : {}),
                     },
-                    notification_url: `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.APP_URL}/api/webhook`,
+                    notification_url: `${baseUrl}/api/webhook`,
                 },
             });
+
+            const qrCode = response.point_of_interaction?.transaction_data?.qr_code;
+            const qrBase64 = response.point_of_interaction?.transaction_data?.qr_code_base64;
+            const ticketUrl = response.point_of_interaction?.transaction_data?.ticket_url;
+
+            console.log(`[checkout] PIX criado: id=${response.id} status=${response.status} order=${external_reference}`);
 
             return res.status(200).json({
                 payment_id: response.id,
                 status: response.status,
-                qr_code: response.point_of_interaction?.transaction_data?.qr_code,
-                qr_code_base64: response.point_of_interaction?.transaction_data?.qr_code_base64,
-                ticket_url: response.point_of_interaction?.transaction_data?.ticket_url,
+                qr_code: qrCode,
+                qr_code_base64: qrBase64,
+                ticket_url: ticketUrl,
             });
         }
 
-        // ── BOLETO ───────────────────────────────────────────────────────
+        // ── BOLETO ───────────────────────────────────────────────────────────
         if (payment_method === 'boleto') {
-            const payment = new Payment(client);
-            const response = await payment.create({
+            const paymentApi = new Payment(client);
+            const response = await paymentApi.create({
                 body: {
-                    transaction_amount: total,
+                    transaction_amount: Number(total),
                     description: items.map(i => i.title).join(', ').slice(0, 200),
                     payment_method_id: 'bolbradesco',
+                    external_reference: external_reference ?? '',
                     payer: {
-                        email: payer.email,
-                        first_name: payer.name.split(' ')[0],
-                        last_name: payer.name.split(' ').slice(1).join(' '),
-                        identification: payer.identification,
+                        email: payer.email || 'cliente@xtudo.com',
+                        first_name: payer.name.split(' ')[0] || 'Cliente',
+                        last_name: payer.name.split(' ').slice(1).join(' ') || 'XTUDO',
+                        ...(identification ? { identification } : {}),
                     },
+                    notification_url: `${baseUrl}/api/webhook`,
                 },
             });
 
             return res.status(200).json({
                 payment_id: response.id,
                 status: response.status,
-                barcode: response.barcode?.content,
+                barcode: (response as any).barcode?.content,
                 ticket_url: response.transaction_details?.external_resource_url,
             });
         }
 
-        // ── CARTÃO (Checkout Pro / redirect) ─────────────────────────────
-        // Para cartão usamos Checkout Pro com redirect. O frontend recebe o init_point URL.
+        // ── CARTÃO (Checkout Pro) ─────────────────────────────────────────────
         const { Preference } = await import('mercadopago');
         const preference = new Preference(client);
         const response = await preference.create({
             body: {
-                items: items.map(i => ({
+                external_reference: external_reference ?? '',
+                items: items.map((i, idx) => ({
+                    id: String(idx),
                     title: i.title,
                     unit_price: i.unit_price,
                     quantity: i.quantity,
@@ -90,18 +109,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     currency_id: 'BRL',
                 })),
                 payer: {
-                    email: payer.email,
-                    name: payer.name,
-                    identification: payer.identification,
+                    email: payer.email || 'cliente@xtudo.com',
+                    name: payer.name || 'Cliente XTUDO',
+                    ...(identification ? { identification } : {}),
                 },
-                payment_methods: { excluded_payment_types: [{ id: 'ticket' }, { id: 'bank_transfer' }] },
+                payment_methods: {
+                    excluded_payment_types: [{ id: 'ticket' }, { id: 'bank_transfer' }],
+                },
                 back_urls: {
-                    success: `${process.env.APP_URL ?? 'https://xtudoparaguai.vercel.app'}/#order-success`,
-                    failure: `${process.env.APP_URL ?? 'https://xtudoparaguai.vercel.app'}/#checkout`,
-                    pending: `${process.env.APP_URL ?? 'https://xtudoparaguai.vercel.app'}/#order-success`,
+                    success: `${baseUrl}/#order-success`,
+                    failure: `${baseUrl}/#checkout`,
+                    pending: `${baseUrl}/#order-success`,
                 },
                 auto_return: 'approved',
-                notification_url: `${process.env.APP_URL ?? 'https://xtudoparaguai.vercel.app'}/api/webhook`,
+                notification_url: `${baseUrl}/api/webhook`,
             },
         });
 
@@ -112,7 +133,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
     } catch (err: any) {
-        console.error('[/api/checkout] error:', err);
-        return res.status(500).json({ error: 'Erro ao criar pagamento', detail: err?.message });
+        // Extrai o detalhe do erro do MP (pode ser objeto aninhado)
+        const mpDetail = err?.cause?.[0]?.description
+            ?? err?.cause?.description
+            ?? err?.message
+            ?? 'Erro desconhecido';
+
+        console.error('[/api/checkout] error:', JSON.stringify(err?.cause ?? err?.message ?? err));
+
+        return res.status(500).json({
+            error: 'Erro ao criar pagamento',
+            detail: mpDetail,
+        });
     }
 }
