@@ -201,8 +201,7 @@ const Checkout: React.FC = () => {
         setPaymentError('');
 
         try {
-            // 1. Criar pedido no Supabase (status 'pending')
-            // UUID validation — produtos dos constants têm IDs numéricos, não UUIDs
+            // 1. Criar pedido no Supabase (best-effort — falha NÃO bloqueia o pagamento)
             const isUUID = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
             const orderItems = items.map(i => ({
                 product_id: isUUID(String(i.product.id)) ? i.product.id : null,
@@ -212,13 +211,19 @@ const Checkout: React.FC = () => {
                 unit_price: i.product.priceBRL,
             }));
 
-            const orderId = user ? await createOrder({
-                buyer_id: user.id,
-                total_brl: displayTotal,
-                payment_method: payment,
-                items: orderItems,
-                address: { cep: form.cep, street: form.address, number: form.number, complement: form.complement, city: form.city, state: form.state },
-            }) : null;
+            let orderId: string | null = null;
+            try {
+                orderId = user ? await createOrder({
+                    buyer_id: user.id,
+                    total_brl: displayTotal,
+                    payment_method: payment,
+                    items: orderItems,
+                    address: { cep: form.cep, street: form.address, number: form.number, complement: form.complement, city: form.city, state: form.state },
+                }) : null;
+            } catch (orderErr: any) {
+                // Ordem não crítica para o pagamento — apenas loga e continua
+                console.warn('[handlePlaceOrder] createOrder falhou, continuando...', orderErr?.message);
+            }
 
             // 2. Chamar /api/checkout no Mercado Pago
             const res = await fetch('/api/checkout', {
