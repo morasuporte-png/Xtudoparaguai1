@@ -66,10 +66,10 @@ const SellerDashboard: React.FC = () => {
   // ── Product creation modal state ────────────────────────────────────────────
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSaving, setProductSaving] = useState(false);
+  const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
   const [productForm, setProductForm] = useState({
     title: '', category_name: 'Eletrônicos', description: '',
     price_brl: '', compare_price_brl: '', stock: '1',
-    image_url: '',
   });
 
   const handleSellerRegister = async () => {
@@ -842,12 +842,27 @@ const SellerDashboard: React.FC = () => {
       price_brl: Number(productForm.price_brl),
       compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
       stock: Number(productForm.stock) || 1,
-      images: productForm.image_url ? [productForm.image_url] : [],
+      images: await (async () => {
+        if (productImageFiles.length === 0) return [];
+        const urls: string[] = [];
+        for (const file of productImageFiles) {
+          const path = `${user.id}/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+          const { error: upErr } = await supabase.storage
+            .from('product-images')
+            .upload(path, file, { upsert: true });
+          if (!upErr) {
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+            if (urlData?.publicUrl) urls.push(urlData.publicUrl);
+          }
+        }
+        return urls;
+      })(),
     });
     setProductSaving(false);
     if (result) {
       setShowProductModal(false);
-      setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1', image_url: '' });
+      setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
+      setProductImageFiles([]);
       // Refresh product list
       const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
       if (data) setMyProducts(data.map((p: any) => ({
@@ -899,9 +914,26 @@ const SellerDashboard: React.FC = () => {
                   <input type="number" min="1" placeholder="1" value={productForm.stock} onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL da Imagem do Produto</label>
-                  <input type="url" placeholder="https://exemplo.com/imagem.jpg" value={productForm.image_url} onChange={e => setProductForm(f => ({ ...f, image_url: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-                  {productForm.image_url && <img src={productForm.image_url} alt="preview" className="mt-2 w-20 h-20 rounded-xl object-cover border border-slate-200" />}
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fotos do Produto (máx. 5)</label>
+                  <label className="flex flex-col items-center justify-center w-full h-28 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={e => {
+                      const files = Array.from(e.target.files || []).slice(0, 5);
+                      setProductImageFiles(files);
+                    }} />
+                    <span className="text-3xl mb-1">📸</span>
+                    <span className="text-xs font-bold text-slate-500">Clique para selecionar</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WEBP • Até 5 imagens</span>
+                  </label>
+                  {productImageFiles.length > 0 && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {productImageFiles.map((f, i) => (
+                        <div key={i} className="relative group">
+                          <img src={URL.createObjectURL(f)} alt={`preview-${i}`} className="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm" />
+                          <button type="button" onClick={() => setProductImageFiles(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full w-4 h-4 text-[9px] font-black flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity">x</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
