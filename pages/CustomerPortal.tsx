@@ -490,41 +490,95 @@ const CustomerPortal: React.FC = () => {
         </div>
     );
 
+    const navItems: { id: PortalTab; icon: string; label: string }[] = [
+        { id: 'orders', icon: '📦', label: 'Pedidos' },
+        { id: 'rewards', icon: '🏆', label: 'Rewards' },
+        { id: 'profile', icon: '👤', label: 'Perfil' },
+        { id: 'addresses', icon: '📍', label: 'Endereços' },
+        { id: 'wishlist', icon: '❤️', label: 'Favoritos' },
+        { id: 'conversations', icon: '💬', label: 'Conversas' },
+    ];
+
     return (
-        <div className="min-h-screen bg-[#fafafa] py-12">
-            <div className="max-w-5xl mx-auto px-4 lg:px-6">
+        <div className="min-h-screen bg-slate-50/60">
+            <div className="max-w-6xl mx-auto px-4 py-10">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-12">
-                    <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Minha <span className="text-indigo-600">Conta</span></h1>
-                        <p className="text-slate-500 font-medium">Gerencie seus pedidos, dados e favoritos em um só lugar.</p>
+                {/* Profile Hero Card */}
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[28px] p-6 mb-8 flex items-center gap-5 shadow-xl shadow-indigo-200/50 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-white/5 pointer-events-none" />
+                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-black text-white shadow-lg flex-shrink-0 border border-white/20">
+                        {(profile?.full_name || user?.email || 'U')[0].toUpperCase()}
                     </div>
-
-                    <div className="bg-white border-2 border-slate-100 rounded-3xl p-1 shadow-sm flex items-center overflow-x-auto max-w-full">
-                        {(['orders', 'rewards', 'profile', 'addresses', 'wishlist', 'conversations'] as PortalTab[]).map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-tighter whitespace-nowrap ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                {tab === 'orders' ? 'Pedidos' : tab === 'rewards' ? '🏆 Rewards' : tab === 'profile' ? 'Perfil' : tab === 'addresses' ? 'Endereços' : tab === 'wishlist' ? 'Favoritos' : 'Conversas'}
-                            </button>
-                        ))}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-white font-black text-lg leading-tight truncate">
+                            {profile?.full_name || 'Minha Conta'}
+                        </p>
+                        <p className="text-white/60 text-sm font-medium truncate">{user?.email}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <span className="inline-flex items-center gap-1 bg-white/15 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+                                {tierIcons[tier]} {tier}
+                            </span>
+                            <span className="text-white/50 text-xs">·</span>
+                            <span className="text-white/70 text-xs font-bold">{points} pts</span>
+                        </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right hidden sm:block">
+                        <p className="text-white/50 text-[10px] uppercase tracking-widest font-black">Saldo</p>
+                        <p className="text-white font-black text-2xl">R$ {pointsToDiscount(points).toFixed(2)}</p>
+                        <p className="text-white/50 text-[10px]">em créditos</p>
                     </div>
                 </div>
 
-                <main>
-                    {activeTab === 'orders' && <RenderOrders />}
-                    {activeTab === 'rewards' && <RenderRewards />}
-                    {activeTab === 'profile' && <RenderProfile />}
-                    {activeTab === 'addresses' && <RenderAddresses />}
-                    {activeTab === 'wishlist' && <RenderOrders />}
-                    {activeTab === 'conversations' && <RenderConversations />}
-                </main>
+                <div className="flex flex-col lg:flex-row gap-6">
+
+                    {/* Sidebar Navigation */}
+                    <aside className="lg:w-56 flex-shrink-0">
+                        {/* Mobile: icon grid */}
+                        <div className="lg:hidden grid grid-cols-6 gap-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-3 mb-6 overflow-hidden">
+                            {navItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <span className="text-lg">{item.icon}</span>
+                                    <span className="text-[8px] font-black uppercase tracking-tight leading-none">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Desktop: vertical sidebar */}
+                        <nav className="hidden lg:flex flex-col gap-1 bg-white rounded-[24px] border border-slate-100 shadow-sm p-3 sticky top-6">
+                            {navItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-black transition-all text-left ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                                >
+                                    <span className="text-base">{item.icon}</span>
+                                    <span className="uppercase tracking-tight text-[11px]">{item.label}</span>
+                                    {activeTab === item.id && (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 ml-auto opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main className="flex-1 min-w-0">
+                        {activeTab === 'orders' && <RenderOrders />}
+                        {activeTab === 'rewards' && <RenderRewards />}
+                        {activeTab === 'profile' && <RenderProfile />}
+                        {activeTab === 'addresses' && <RenderAddresses />}
+                        {activeTab === 'wishlist' && <RenderOrders />}
+                        {activeTab === 'conversations' && <RenderConversations />}
+                    </main>
+                </div>
             </div>
         </div>
     );
 };
 
 export default CustomerPortal;
+
