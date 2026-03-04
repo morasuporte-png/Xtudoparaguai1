@@ -166,14 +166,12 @@ export async function createOrder(params: {
     items: { product_id: string; title: string; image_url: string; quantity: number; unit_price: number }[];
     address: { cep: string; street: string; number: string; complement?: string; city: string; state: string };
 }): Promise<string | null> {
-    // 1. Insert order with new status fields
+    // 1. Insert order — payment_status/order_status use DB defaults if Phase1 migration was applied
     const { data: order, error: orderErr } = await supabase
         .from('orders')
         .insert({
             buyer_id: params.buyer_id,
             status: 'pending',
-            payment_status: 'pending_payment',
-            order_status: 'pending',
             total_brl: params.total_brl,
             payment_method: params.payment_method,
         })
@@ -181,7 +179,7 @@ export async function createOrder(params: {
         .single();
 
     if (orderErr || !order) {
-        console.error('createOrder error:', orderErr);
+        console.error('createOrder error (full):', JSON.stringify(orderErr));
         return null;
     }
 

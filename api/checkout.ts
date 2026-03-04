@@ -133,17 +133,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
     } catch (err: any) {
-        // Extrai o detalhe do erro do MP (pode ser objeto aninhado)
-        const mpDetail = err?.cause?.[0]?.description
+        // Extrai o detalhe do erro do MP em vários formatos possíveis
+        const mpDetail =
+            err?.cause?.[0]?.description
+            ?? err?.cause?.[0]?.message
             ?? err?.cause?.description
+            ?? err?.response?.data?.message
             ?? err?.message
             ?? 'Erro desconhecido';
 
-        console.error('[/api/checkout] error:', JSON.stringify(err?.cause ?? err?.message ?? err));
+        const fullErr = {
+            message: err?.message,
+            status: err?.status,
+            cause: err?.cause,
+            errorResponse: err?.errorResponse ?? err?.response?.data,
+        };
+
+        console.error('[/api/checkout] FULL ERROR:', JSON.stringify(fullErr, null, 2));
 
         return res.status(500).json({
             error: 'Erro ao criar pagamento',
             detail: mpDetail,
+            debug: fullErr,   // remover em produção quando o bug for resolvido
         });
     }
 }
