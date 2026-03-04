@@ -6,7 +6,7 @@ import { getProductOptimizationSuggestion } from '../services/geminiService';
 import { useChat, ChatRoom } from '../context/ChatContext';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { getProfile, DbProfile } from '../services/db';
+import { getProfile, DbProfile, createProduct } from '../services/db';
 import { Product } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -62,6 +62,15 @@ const SellerDashboard: React.FC = () => {
   const [regForm, setRegForm] = useState({ full_name: '', document: '', phone: '', store_name: '', store_description: '' });
   const [regLoading, setRegLoading] = useState(false);
   const [regStep, setRegStep] = useState<1 | 2>(1);
+
+  // ── Product creation modal state ────────────────────────────────────────────
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productSaving, setProductSaving] = useState(false);
+  const [productForm, setProductForm] = useState({
+    title: '', category_name: 'Eletrônicos', description: '',
+    price_brl: '', compare_price_brl: '', stock: '1',
+    image_url: '',
+  });
 
   const handleSellerRegister = async () => {
     if (!user) return;
@@ -345,7 +354,7 @@ const SellerDashboard: React.FC = () => {
           />
         </div>
         <button
-          onClick={() => { window.location.hash = '#seller/products/new'; }}
+          onClick={() => setShowProductModal(true)}
           className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <svg xmlns="http://www.w3.org/2000/xl" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -821,11 +830,94 @@ const SellerDashboard: React.FC = () => {
     { id: 'analytics' as SellerTab, icon: '📈', label: 'Analytics' },
   ];
 
+  const handleCreateProduct = async () => {
+    if (!user || !productForm.title || !productForm.price_brl) return;
+    setProductSaving(true);
+    const result = await createProduct({
+      seller_id: user.id,
+      seller_name: sellerProfile?.full_name || sellerProfile?.store_name || user.email || 'Lojista',
+      title: productForm.title,
+      category_name: productForm.category_name,
+      description: productForm.description,
+      price_brl: Number(productForm.price_brl),
+      compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
+      stock: Number(productForm.stock) || 1,
+      images: productForm.image_url ? [productForm.image_url] : [],
+    });
+    setProductSaving(false);
+    if (result) {
+      setShowProductModal(false);
+      setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1', image_url: '' });
+      // Refresh product list
+      const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
+      if (data) setMyProducts(data.map((p: any) => ({
+        id: p.id, sellerId: p.seller_id, sellerName: p.seller_name, category: p.category_name,
+        title: p.title, description: p.description, priceBRL: Number(p.price_brl),
+        comparePriceBRL: Number(p.compare_price_brl), stock: p.stock, rating: Number(p.rating),
+        images: p.images ?? [], specs: p.specs ?? [], isVerified: p.is_verified,
+      })));
+    }
+  };
+
+  const CATGORIES = ['Eletrônicos', 'Celulares', 'Computadores', 'Acessórios', 'Games', 'Apple', 'Perfumes', 'Relógios', 'Moda', 'Calçados', 'Casa', 'Esportes', 'Outros'];
+
   return (
     <div className="min-h-screen bg-slate-50/60">
       <div className="max-w-7xl mx-auto px-4 py-10">
 
-        {/* Seller Hero Card */}
+        {/* Product Creation Modal */}
+        {showProductModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={e => e.target === e.currentTarget && setShowProductModal(false)}>
+            <div className="bg-white rounded-t-[32px] sm:rounded-[32px] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-t-[32px] sm:rounded-t-[32px]">
+                <h3 className="text-white font-black text-lg">✨ Cadastrar Novo Produto</h3>
+                <p className="text-white/60 text-sm mt-0.5">Preencha os dados do produto para publicar na XTUDO</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Produto *</label>
+                  <input type="text" placeholder="Ex: iPhone 15 Pro 256GB Preto" value={productForm.title} onChange={e => setProductForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria *</label>
+                  <select value={productForm.category_name} onChange={e => setProductForm(f => ({ ...f, category_name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+                    {CATGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (R$) *</label>
+                    <input type="number" min="0" step="0.01" placeholder="0,00" value={productForm.price_brl} onChange={e => setProductForm(f => ({ ...f, price_brl: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço Original (R$)</label>
+                    <input type="number" min="0" step="0.01" placeholder="0,00" value={productForm.compare_price_brl} onChange={e => setProductForm(f => ({ ...f, compare_price_brl: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantidade em Estoque *</label>
+                  <input type="number" min="1" placeholder="1" value={productForm.stock} onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL da Imagem do Produto</label>
+                  <input type="url" placeholder="https://exemplo.com/imagem.jpg" value={productForm.image_url} onChange={e => setProductForm(f => ({ ...f, image_url: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                  {productForm.image_url && <img src={productForm.image_url} alt="preview" className="mt-2 w-20 h-20 rounded-xl object-cover border border-slate-200" />}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                  <textarea rows={3} placeholder="Descreva o produto..." value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none" />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowProductModal(false)} className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">Cancelar</button>
+                  <button onClick={handleCreateProduct} disabled={productSaving || !productForm.title || !productForm.price_brl} className="flex-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-40">
+                    {productSaving ? '⏳ Publicando...' : '🚀 Publicar Produto'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[28px] p-6 mb-8 flex items-center gap-5 shadow-xl shadow-indigo-200/50 relative overflow-hidden">
           <div className="absolute inset-0 bg-white/5 pointer-events-none" />
           <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-black text-white shadow-lg flex-shrink-0 border border-white/20">

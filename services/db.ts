@@ -74,6 +74,39 @@ export interface DbProduct {
     created_at?: string;
 }
 
+/** Cria um produto no Supabase para o seller logado */
+export async function createProduct(params: {
+    seller_id: string;
+    seller_name: string;
+    title: string;
+    category_name: string;
+    description: string;
+    price_brl: number;
+    compare_price_brl: number;
+    stock: number;
+    images: string[];
+}): Promise<{ id: string } | null> {
+    const { data, error } = await supabase
+        .from('products')
+        .insert({
+            seller_id: params.seller_id,
+            seller_name: params.seller_name,
+            title: params.title,
+            category_name: params.category_name,
+            description: params.description,
+            price_brl: params.price_brl,
+            compare_price_brl: params.compare_price_brl,
+            stock: params.stock,
+            images: params.images,
+            is_active: true,
+            rating: 0,
+        })
+        .select('id')
+        .single();
+    if (error) { console.error('createProduct error:', error); return null; }
+    return data;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────────────────────────────────────
