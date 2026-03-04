@@ -64,7 +64,7 @@ const PixQRCode: React.FC<{ qrCodeBase64?: string; pixKey?: string; amount?: num
                 )}
             </div>
 
-            {amount && <p className="text-xl font-black text-slate-900">R$ {amount.toFixed(2).replace('.', ',')}</p>}
+            {(amount ?? 0) > 0 && <p className="text-xl font-black text-slate-900">R$ {amount!.toFixed(2).replace('.', ',')}</p>}
 
             {pixKey && (
                 <div className="w-full space-y-2">
@@ -106,6 +106,8 @@ const Checkout: React.FC = () => {
     const [pixData, setPixData] = useState<{ qrCodeBase64?: string; pixKey?: string; paymentId?: string } | null>(null);
     const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
     const [paymentError, setPaymentError] = useState('');
+    // Total congelado no momento em que o pagamento foi criado
+    const [confirmedTotal, setConfirmedTotal] = useState(0);
 
     // Shipping
     interface ShippingOption { id: number; name: string; company: string; price: number; delivery_time: number; }
@@ -226,6 +228,7 @@ const Checkout: React.FC = () => {
             }
 
             // 2. Chamar /api/checkout no Mercado Pago
+            setConfirmedTotal(displayTotal);  // congela o total antes do fetch
             const res = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -543,7 +546,7 @@ const Checkout: React.FC = () => {
                                         <PixQRCode
                                             qrCodeBase64={pixData?.qrCodeBase64}
                                             pixKey={pixData?.pixKey}
-                                            amount={displayTotal}
+                                            amount={confirmedTotal || displayTotal}
                                         />
                                     </div>
                                 )}
@@ -570,7 +573,7 @@ const Checkout: React.FC = () => {
                                             Processando pagamento...
                                         </span>
                                     ) : (
-                                        `✓ Confirmar Pedido — R$ ${displayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                        `✓ Confirmar Pedido — R$ ${(confirmedTotal > 0 ? confirmedTotal : displayTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                                     )}
                                 </button>
                                 {paymentError && (
