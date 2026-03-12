@@ -70,6 +70,7 @@ export interface DbProduct {
     title: string;
     category: string;
     sub_category: string | null;
+    sub_sub_category?: string | null;
     description: string | null;
     brand: string | null;
     condition: string;
@@ -322,25 +323,58 @@ export async function deleteAddress(addressId: string): Promise<boolean> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Salva (cria ou atualiza) um produto no banco */
-export async function saveProduct(product: DbProduct): Promise<string | null> {
-    const { id, ...rest } = product;
+export const saveProduct = async (product: Omit<DbProduct, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => {
+    try {
+        const { id, ...dataToSave } = product;
 
-    if (id) {
-        // Update existing
-        const { error } = await supabase.from('products').update(rest).eq('id', id);
-        if (error) { console.error('saveProduct update error:', error); return null; }
-        return id;
-    } else {
-        // Insert new
-        const { data, error } = await supabase
-            .from('products')
-            .insert(rest)
-            .select('id')
-            .single();
-        if (error) { console.error('saveProduct insert error:', error); return null; }
-        return data?.id ?? null;
+        // Ensure category and status rules
+        const dbReadyData = {
+            ...dataToSave,
+            is_active: dataToSave.is_active !== undefined ? dataToSave.is_active : true, // Explicitly set default
+            // Sanitize prices
+            price_brl: Math.max(0, dataToSave.price_brl || 0),
+            compare_price_brl: dataToSave.compare_price_brl ? Math.max(0, dataToSave.compare_price_brl) : null,
+            // Categories mapping
+            category: dataToSave.category,
+            sub_category: dataToSave.sub_category || null,
+            sub_sub_category: dataToSave.sub_sub_category || null,
+        };
+
+        if (id) {
+            console.log('Update payload:', dbReadyData); // Debug log
+            // Updating existing product
+            const { data, error } = await supabase
+                .from('products')
+                .update(dbReadyData)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error updating product:', error);
+                throw error;
+            }
+            return data.id;
+        } else {
+            console.log('Insert payload:', dbReadyData); // Debug log
+            // Creating new product
+            const { data, error } = await supabase
+                .from('products')
+                .insert([dbReadyData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error creating product:', error);
+                throw error;
+            }
+            return data.id;
+        }
+    } catch (error) {
+        console.error('saveProduct error:', error);
+        return null;
     }
-}
+};
 
 /** Busca produtos ativos de um seller específico */
 export async function getSellerProducts(sellerId: string): Promise<DbProduct[]> {

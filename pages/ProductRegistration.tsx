@@ -11,7 +11,7 @@ interface ProductRegistrationProps {
 }
 
 const EMPTY_DRAFT: ProductDraft = {
-    title: '', category: '', subCategory: '', description: '',
+    title: '', category: '', subCategory: '', subSubCategory: '', description: '',
     brand: '', condition: 'new', origin: 'Paraguai',
     specs: [{ key: '', value: '' }],
     images: [], priceBRL: '', comparePriceBRL: '',
@@ -95,6 +95,7 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
             title: draft.title,
             category: draft.category,
             sub_category: draft.subCategory || null,
+            sub_sub_category: draft.subSubCategory || null,
             description: draft.description || null,
             brand: draft.brand || null,
             condition: draft.condition,
@@ -208,12 +209,12 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
                                     </div>
                                 </div>
 
-                                {/* Categoria + Sub */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Categoria + Sub + SubSub */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Categoria</label>
                                         <select
-                                            value={draft.category} onChange={e => { set('category', e.target.value); set('subCategory', ''); }}
+                                            value={draft.category} onChange={e => { set('category', e.target.value); set('subCategory', ''); set('subSubCategory', ''); }}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
                                         >
                                             <option value="">Selecionar categoria</option>
@@ -225,13 +226,26 @@ const ProductRegistration: React.FC<ProductRegistrationProps> = ({ onBack, initi
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Sub-categoria</label>
                                         <select
-                                            value={draft.subCategory} onChange={e => set('subCategory', e.target.value)}
+                                            value={draft.subCategory} onChange={e => { set('subCategory', e.target.value); set('subSubCategory', ''); }}
                                             disabled={!draft.category}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white disabled:opacity-50"
                                         >
                                             <option value="">Selecionar sub-categoria</option>
                                             {draft.category && CATEGORY_MAP[draft.category]?.subCategories.map(s => (
-                                                <option key={s} value={s}>{s}</option>
+                                                <option key={s.id} value={s.id}>{s.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Tipo de Produto</label>
+                                        <select
+                                            value={draft.subSubCategory || ''} onChange={e => set('subSubCategory', e.target.value)}
+                                            disabled={!draft.subCategory || !CATEGORY_MAP[draft.category]?.subCategories.find(s => s.id === draft.subCategory)?.children?.length}
+                                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white disabled:opacity-50"
+                                        >
+                                            <option value="">Selecionar tipo (opcional)</option>
+                                            {draft.subCategory && CATEGORY_MAP[draft.category]?.subCategories.find(s => s.id === draft.subCategory)?.children?.map((child: any) => (
+                                                <option key={child.id} value={child.id}>{child.label}</option>
                                             ))}
                                         </select>
                                     </div>

@@ -21,6 +21,7 @@ export interface ProductDraft {
   title: string;
   category: string;
   subCategory: string;
+  subSubCategory?: string;
   description: string;
   brand: string;
   condition: 'new' | 'refurbished' | 'original';
@@ -42,6 +43,8 @@ export interface Product {
   sellerId: string;
   sellerName: string;
   category: string;
+  sub_category?: string;
+  sub_sub_category?: string;
   title: string;
   description: string;
   priceBRL: number;

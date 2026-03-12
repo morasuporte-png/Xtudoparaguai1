@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
+import { CATEGORY_MAP } from '../constants';
 import Logo from './Logo';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
@@ -117,6 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [country, setCountry] = useState<CountryCode>('BR');
   const [countryOpen, setCountryOpen] = useState(false);
+  const [deptHover, setDeptHover] = useState<string | null>(null);
   const [deptOpen, setDeptOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut } = useAuth();
@@ -335,22 +337,72 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
             {deptOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} onMouseLeave={() => setDeptOpen(false)} />
+                {/* Advanced Mega Menu Dropdown */}
                 <div
-                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[220px] py-2"
+                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[300px] flex shadow-indigo-100/50"
                   onMouseEnter={() => setDeptOpen(true)}
-                  onMouseLeave={() => setDeptOpen(false)}
+                  onMouseLeave={() => { setDeptOpen(false); setDeptHover(null); }}
                 >
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-4 pt-1 pb-2">Departamentos</p>
-                  {DEPT_MENU.map(dept => (
-                    <button
-                      key={dept.label}
-                      onClick={() => { window.location.hash = dept.hash; setDeptOpen(false); }}
-                      className="group w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
-                    >
-                      <span className="text-slate-400 group-hover:text-indigo-600 transition-colors">{dept.icon}</span>
-                      {dept.label}
-                    </button>
-                  ))}
+                  {/* Left Column: Root Categories */}
+                  <div className="w-72 bg-slate-50 border-r border-slate-100 py-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-5 pt-3 pb-2">Departamentos</p>
+                    {Object.entries(CATEGORY_MAP).map(([slug, meta]) => (
+                      <div
+                        key={slug}
+                        onMouseEnter={() => setDeptHover(slug)}
+                        className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-bold transition-colors cursor-pointer ${deptHover === slug ? 'bg-white text-indigo-700 shadow-sm border-l-4 border-indigo-600' : 'text-slate-700 hover:bg-slate-100 border-l-4 border-transparent'
+                          }`}
+                        onClick={() => { window.location.hash = `#category/${slug}`; setDeptOpen(false); }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`${deptHover === slug ? 'text-indigo-600' : 'text-slate-400'}`}>{meta.iconPath}</span>
+                          {meta.label}
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === slug ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right Column: SubCategories and Grandchildren */}
+                  {deptHover && CATEGORY_MAP[deptHover] && (
+                    <div className="flex-1 bg-white p-6 min-w-[500px]">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                        <span className="text-indigo-600 w-6 h-6">{CATEGORY_MAP[deptHover].iconPath}</span>
+                        <h3 className="font-extrabold text-xl text-slate-900">{CATEGORY_MAP[deptHover].label}</h3>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
+                        {CATEGORY_MAP[deptHover].subCategories.map(subCategory => (
+                          <div key={subCategory.id} className="space-y-4">
+                            <h4
+                              className="font-bold text-slate-800 flex items-center gap-2 hover:text-indigo-600 cursor-pointer transition-colors"
+                              onClick={() => { window.location.hash = `#category/${deptHover}/${subCategory.id}`; setDeptOpen(false); }}
+                            >
+                              <span className="text-slate-400 w-4 h-4">{subCategory.icon}</span>
+                              {subCategory.label}
+                            </h4>
+                            {subCategory.children && subCategory.children.length > 0 && (
+                              <ul className="space-y-2.5 ml-6">
+                                {subCategory.children.map(child => (
+                                  <li key={child.id}>
+                                    <a
+                                      href={`#category/${deptHover}/${subCategory.id}/${child.id}`}
+                                      className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors"
+                                      onClick={() => setDeptOpen(false)}
+                                    >
+                                      {child.label}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
