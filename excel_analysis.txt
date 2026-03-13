@@ -1,0 +1,499 @@
+
+=========================================
+FILE: 2_DECORAÇÃO.xlsx
+SHEETS: CAT.1 DECORAÇÃO, CAT.2 MÓVEIS, CAT.3 CASA & CONSTRUÇÃO, CAT.4 CAMA, MESA E BANHO, CAT.5 FERRAMENTAS, CAT.6 UTILIDADES DOMÉSTICAS, CAT.7 PET SHOP, CAT.8 CURSOS, CAT.9 ÁUDIO E VÍDEO, CAT.11 INFORMÁTICA, MARCAS , OUTLET, Planilha7
+
+  Sheet: CAT.1 DECORAÇÃO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["DECORAÇÃO"]
+    Row 2: []
+  Sheet: CAT.2 MÓVEIS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MÓVEIS"]
+    Row 2: []
+  Sheet: CAT.3 CASA & CONSTRUÇÃO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["CASA E CONSTRUÇÃO"]
+    Row 2: []
+  Sheet: CAT.4 CAMA, MESA E BANHO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["CAMA, MESA E BANHO"]
+    Row 2: []
+  Sheet: CAT.5 FERRAMENTAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["FERRAMENTAS"]
+    Row 2: []
+  Sheet: CAT.6 UTILIDADES DOMÉSTICAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["UTILIDADES DOMÉSTICAS"]
+    Row 2: []
+  Sheet: CAT.7 PET SHOP
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["PET SHOP"]
+    Row 2: []
+  Sheet: CAT.8 CURSOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["CURSOS"]
+    Row 2: []
+  Sheet: CAT.9 ÁUDIO E VÍDEO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ÁUDIO E VÍDEO"]
+    Row 2: []
+  Sheet: CAT.11 INFORMÁTICA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["INFORMÁTICA"]
+    Row 2: []
+  Sheet: MARCAS 
+  Headers: [" "]
+  First 2 rows of data:
+    Row 1: ["OFERTAS DO DIA"]
+    Row 2: []
+  Sheet: OUTLET
+  Headers: ["OUTLET"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+  Sheet: Planilha7
+  Headers: []
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+
+=========================================
+FILE: 3_PET.xlsx
+SHEETS: Geral, Cães, Gatos, Outros Pets, Farmácia, Casa, Decor & jardim, Agro & Rural, Cereais , Marcas, Eco & Sustentáveis , Linha Profissional , Out Let, Serviços, Planilha7
+
+  Sheet: Geral
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Cães","Gatos","Outros Pets","Casa, Decor & Jardim","Marcas","Outlet","Eco-Friedly"]
+    Row 2: []
+  Sheet: Cães
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Cães"]
+    Row 2: []
+  Sheet: Gatos
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Gatos"]
+    Row 2: []
+  Sheet: Outros Pets
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Outros Pets"]
+    Row 2: []
+  Sheet: Farmácia
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Farmácia"]
+    Row 2: []
+  Sheet: Casa, Decor & jardim
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Casa, Decor & Jardinagem"]
+    Row 2: []
+  Sheet: Agro & Rural
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Agro e Rural"]
+    Row 2: []
+  Sheet: Cereais 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Zona Cerealista"]
+    Row 2: []
+  Sheet: Marcas
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Marcas"]
+    Row 2: []
+  Sheet: Eco & Sustentáveis 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Marcas"]
+    Row 2: []
+  Sheet: Linha Profissional 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Linha Profissional "]
+    Row 2: []
+  Sheet: Out Let
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Out Let"]
+    Row 2: []
+  Sheet: Serviços
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Serviços"]
+    Row 2: []
+  Sheet: Planilha7
+  Headers: []
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+
+=========================================
+FILE: 4_COSMÉTICOS.xlsx
+SHEETS: 1-TODOS OS PRODUTOS, 2-CABELOS, 3- MAQUIAGEM, 4-SkinCare, 5-PERFUMARIA, 4-UNHAS, 6-CUIDADOS PESSOAIS, PROMOÇÃO, 9-MARCAS , 7-ACESSÓRIOS, 8 -SERVIÇOS DE BELEZA, Planilha7
+
+  Sheet: 1-TODOS OS PRODUTOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["TODOS OS PRODUTOS"]
+    Row 2: []
+  Sheet: 2-CABELOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Cabelos"]
+    Row 2: []
+  Sheet: 3- MAQUIAGEM
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MAQUIAGEM"]
+    Row 2: []
+  Sheet: 4-SkinCare
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["SKINCARE"]
+    Row 2: []
+  Sheet: 5-PERFUMARIA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["PERFUMARIA"]
+    Row 2: []
+  Sheet: 4-UNHAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["UNHAS"]
+    Row 2: []
+  Sheet: 6-CUIDADOS PESSOAIS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Cuidados pessoais"]
+    Row 2: []
+  Sheet: PROMOÇÃO (Empty)
+  Sheet: 9-MARCAS 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MARCAS "]
+    Row 2: []
+  Sheet: 7-ACESSÓRIOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Acessórios"]
+    Row 2: []
+  Sheet: 8 -SERVIÇOS DE BELEZA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Serviços de beleza"]
+    Row 2: []
+  Sheet: Planilha7
+  Headers: []
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+
+=========================================
+FILE: 5_TEXTIL_.xlsx
+SHEETS: ACESSÓRIOS, BOLSAS E MOCHILAS, CASA, COSMÉTICOS, DESTAQUES, FITNESS, KIDS, MODA, SAPATOS
+
+  Sheet: ACESSÓRIOS
+  Headers: ["ACESSÓRIOS"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["ÓCULOS","JOIAS","COLARES E CORRENTES","COLARES E CORRENTES","PULSEIRAS E BRACELETES","ANÉIS","BRINCOS","ACESSÓRIOS PARA CABELO"]
+  Sheet: BOLSAS E MOCHILAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["BOLSAS E MOCHILAS"]
+    Row 2: []
+  Sheet: CASA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["CASA"]
+    Row 2: []
+  Sheet: COSMÉTICOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["COSMÉTICOS"]
+    Row 2: []
+  Sheet: DESTAQUES
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["DESTAQUES"]
+    Row 2: []
+  Sheet: FITNESS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["FITNESS"]
+    Row 2: []
+  Sheet: KIDS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["KIDS"]
+    Row 2: []
+  Sheet: MODA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MODA"]
+    Row 2: []
+  Sheet: SAPATOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: [" SAPATOS CALÇADOS"]
+    Row 2: []
+
+=========================================
+FILE: 6_ALIMENTAÇÃO SAUDÁVEL.xlsx
+SHEETS: 1-Nutrição Esportiva, 2-Alimentação, 3- Cosméticos, 4- Fitness, 5 - Saúde, 6-Pet Natural, 7-Lojas Especiais, 8 - Promoções, MARCAS , Página1, Página2, Planilha7
+
+  Sheet: 1-Nutrição Esportiva
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Nutrição Esportiva"]
+    Row 2: []
+  Sheet: 2-Alimentação
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Alimentação"]
+    Row 2: []
+  Sheet: 3- Cosméticos
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Cosméticos"]
+    Row 2: []
+  Sheet: 4- Fitness
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Fitness"]
+    Row 2: []
+  Sheet: 5 - Saúde
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Saúde"]
+    Row 2: []
+  Sheet: 6-Pet Natural
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Pet Natural"]
+    Row 2: []
+  Sheet: 7-Lojas Especiais
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Lojas Especiais"]
+    Row 2: []
+  Sheet: 8 - Promoções
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Promoções"]
+    Row 2: []
+  Sheet: MARCAS 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MARCAS "]
+    Row 2: []
+  Sheet: Página1 (Empty)
+  Sheet: Página2 (Empty)
+  Sheet: Planilha7
+  Headers: []
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+
+=========================================
+FILE: 7_KIDS E TEENS.xlsx
+SHEETS: ROUPAS, CALÇADOS, BRINQUEDOS, MÓVEIS, DECORAÇÃO, ESCOLAR, BÊBES, ALIMENTAÇÃO, Planilha7
+
+  Sheet: ROUPAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Roupas"]
+    Row 2: []
+  Sheet: CALÇADOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["Calçados"]
+    Row 2: []
+  Sheet: BRINQUEDOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["BRINQUEDOS"]
+    Row 2: []
+  Sheet: MÓVEIS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MÓVEIS"]
+    Row 2: []
+  Sheet: DECORAÇÃO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["DECORAÇÃO"]
+    Row 2: []
+  Sheet: ESCOLAR
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ESCOLAR"]
+    Row 2: []
+  Sheet: BÊBES
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["BÊBES"]
+    Row 2: []
+  Sheet: ALIMENTAÇÃO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ALIMENTAÇÃO"]
+    Row 2: []
+  Sheet: Planilha7
+  Headers: []
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+
+=========================================
+FILE: 8_MULTIMARCAS.xlsx
+SHEETS:  ICONE 1 - CATEGORIA HOME,  ICONE 2- CATEGORIA HOME,  ICONE 3- CATEGORIA HOME,  ICONE 4 - CATEGORIA HOME,  ICONE 5- CATEGORIA HOME,  ICONE 6- CATEGORIA HOME,  ICONE 7- CATEGORIA HOME,  ICONE 8 - CATEGORIA HOME
+
+  Sheet:  ICONE 1 - CATEGORIA HOME
+  Headers: ["FERRAMENTAS"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["Ferramentas Elétricas","Ferramentas Manuais","Ferramentas para Jardinagem",null,null,null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 2- CATEGORIA HOME
+  Headers: ["ELETRODOMÉSTICO"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["COZINHA","SALA ","LAVANDERIA","PEÇAS E CIRCUITOS ELÉTRICOS"]
+  Sheet:  ICONE 3- CATEGORIA HOME
+  Headers: ["ELETROPORTÁTEIS"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["COZINHA","UTILITÁRIOS",null,null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 4 - CATEGORIA HOME
+  Headers: ["MÓVEIS"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["QUARTO","SALA","COZINHA",null,null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 5- CATEGORIA HOME
+  Headers: ["SAÚDE"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["BEM-ESTAR SEXUAL","CUIDADOS PESSOAIS","SUPRIMENTOS MÉDICOS","SUPLEMENTOS ALIMENTARES",null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 6- CATEGORIA HOME
+  Headers: ["MODA"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["ACESSÓRIOS DE MODA","CALÇADOS MASCULINOS","SAPATOS FEMININOS","MODA INFANTIL ",null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 7- CATEGORIA HOME
+  Headers: ["CELULARES "]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["CELULARES E TELEFONIA",null,null,null,null,null,null,"SUBCATEGORIA pai"]
+  Sheet:  ICONE 8 - CATEGORIA HOME
+  Headers: ["INFORMÁTICA"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: ["COMPUTADORES E ACESSÓRIOS",null,null,null,null,null,null,"SUBCATEGORIA pai"]
+
+=========================================
+FILE: FORNECEDOR.SHOP.xlsx
+SHEETS: CONSTRUÇÃO, HIDRÁULICA, ELÉTRICA, ILUMINAÇÃO, TINTAS, MÁQUINAS E FERRAMENTAS, DECORAÇÃO , INFO  SEGURANÇA, PISOS E REVESTIMENTOS, FERRAGENS , MADEIRA, ELETRODOMÉSTICO , EPI, LOUÇAS E METAIS, MARCAS , OUTLET, ONGS, Planilha7
+
+  Sheet: CONSTRUÇÃO
+  Headers: ["MODA"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: [null,"XX","XX","XX","XX","XX","LANÇAMENTOS "]
+  Sheet: HIDRÁULICA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["HIDRAÚLICA"]
+    Row 2: []
+  Sheet: ELÉTRICA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ELÉTRICA "]
+    Row 2: []
+  Sheet: ILUMINAÇÃO
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ILUMINAÇÃO"]
+    Row 2: []
+  Sheet: TINTAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["TINTAS E ACESSÓRIOS"]
+    Row 2: []
+  Sheet: MÁQUINAS E FERRAMENTAS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MÁQUINAS E FERRAMENTAS"]
+    Row 2: []
+  Sheet: DECORAÇÃO 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["DECORAÇÃO"]
+    Row 2: []
+  Sheet: INFO  SEGURANÇA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["INFO / SEGURANÇA"]
+    Row 2: []
+  Sheet: PISOS E REVESTIMENTOS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["PISOS E REVESTIMENTOS"]
+    Row 2: []
+  Sheet: FERRAGENS 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["FERRAGENS "]
+    Row 2: []
+  Sheet: MADEIRA
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MADEIRA "]
+    Row 2: []
+  Sheet: ELETRODOMÉSTICO 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["ELETRODOMÉSTICO "]
+    Row 2: []
+  Sheet: EPI
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["EPI"]
+    Row 2: []
+  Sheet: LOUÇAS E METAIS
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["LOUÇAS E METAIS"]
+    Row 2: []
+  Sheet: MARCAS 
+  Headers: []
+  First 2 rows of data:
+    Row 1: ["MARCAS "]
+    Row 2: []
+  Sheet: OUTLET
+  Headers: ["OUTLET"]
+  First 2 rows of data:
+    Row 1: []
+    Row 2: []
+  Sheet: ONGS
+  Headers: ["ONG'S",null,"CNPJ","EMAIL/CONTATO",null,"ENDEREÇO"]
+  First 2 rows of data:
+    Row 1: ["ALIANÇA DE MISERICÓRDIA",null,"04.186.468/0021-17"]
+    Row 2: ["CENTRO SOCIAL ",null,"27.966.636/0001-49"]
+  Sheet: Planilha7 (Empty)
