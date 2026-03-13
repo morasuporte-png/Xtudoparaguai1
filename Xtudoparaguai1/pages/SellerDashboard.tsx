@@ -5,11 +5,14 @@ import { MOCK_PRODUCTS } from '../constants';
 import { getProductOptimizationSuggestion } from '../services/geminiService';
 import { useChat, ChatRoom } from '../context/ChatContext';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { getProfile, DbProfile, createProduct } from '../services/db';
 import { Product } from '../types';
+import { SUPPLIER_CATEGORIES } from '../data/supplierCategories';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type SellerTab = 'resume' | 'products' | 'orders' | 'messages' | 'logistics' | 'financial';
+type SellerTab = 'resume' | 'products' | 'orders' | 'messages' | 'logistics' | 'financial' | 'analytics';
 
 const salesData = [
   { day: 'Seg', sales: 4200 },
@@ -37,65 +40,88 @@ const SellerDashboard: React.FC = () => {
   const [productSearch, setProductSearch] = useState('');
   const [myProducts, setMyProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const [sellerProfile, setSellerProfile] = useState<DbProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
+  // Fetch seller profile — mark done even if profile doesn't exist yet
   useEffect(() => {
-    async function fetchSellerProducts() {
+    if (!user) { setProfileLoading(false); return; }
+    getProfile(user.id).then(data => {
+      setSellerProfile(data);
+      setProfileLoading(false);
+    });
+  }, [user]);
+
+  const sellerDisplayName = sellerProfile?.full_name || user?.email?.split('@')[0] || 'Lojista';
+
+  // ── Gate conditions (computed before hooks that depend on them) ─────────────
+  const isSellerVerified = !!(sellerProfile?.role === 'seller' && sellerProfile?.store_name);
+
+
+  // ── Registration form state ─────────────────────────────────────────────────
+  const [regForm, setRegForm] = useState({ full_name: '', document: '', phone: '', store_name: '', store_description: '' });
+  const [regLoading, setRegLoading] = useState(false);
+  const [regStep, setRegStep] = useState<1 | 2>(1);
+
+  // ── Product creation modal state ────────────────────────────────────────────
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productSaving, setProductSaving] = useState(false);
+  const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
+  const [productForm, setProductForm] = useState({
+    title: '', description: '',
+    price_brl: '', compare_price_brl: '', stock: '1',
+  });
+  const [selectedL1, setSelectedL1] = useState('');
+  const [selectedL2, setSelectedL2] = useState('');
+  const [selectedL3, setSelectedL3] = useState('');
+
+  const handleSellerRegister = async () => {
+    if (!user) return;
+    setRegLoading(true);
+    await (await import('../services/db')).upsertProfile({
+      id: user.id, role: 'seller',
+      full_name: regForm.full_name, phone: regForm.phone,
+      store_name: regForm.store_name as any, document: regForm.document as any,
+      store_description: regForm.store_description as any,
+    });
+    const updated = await (await import('../services/db')).getProfile(user.id);
+    setSellerProfile(updated);
+    setRegLoading(false);
+  };
+
+  // ── Products fetch (all hooks MUST come before early returns) ───────────────
+  useEffect(() => {
+    if (!user || !isSellerVerified) return;
+    (async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('seller_id', 's1'); // Mock seller ID
-
+        const { data, error } = await supabase.from('products').select('*').eq('seller_id', user.id);
         if (!error && data) {
-          const transformed: Product[] = data.map((p: any) => ({
-            id: p.id,
-            sellerId: p.seller_id,
-            sellerName: p.seller_name,
-            category: p.category_name,
-            title: p.title,
-            description: p.description,
-            priceBRL: Number(p.price_brl),
-            comparePriceBRL: Number(p.compare_price_brl),
-            stock: p.stock,
-            rating: Number(p.rating),
-            images: p.images,
-            specs: p.specs,
-            isVerified: p.is_verified
-          }));
-          setMyProducts(transformed);
+          setMyProducts(data.map((p: any) => ({
+            id: p.id, sellerId: p.seller_id, sellerName: p.seller_name, category: p.category_name,
+            title: p.title, description: p.description, priceBRL: Number(p.price_brl),
+            comparePriceBRL: Number(p.compare_price_brl), stock: p.stock, rating: Number(p.rating),
+            images: p.images, specs: p.specs, isVerified: p.is_verified
+          })));
         }
-      } catch (err) {
-        console.error('Error fetching seller products:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchSellerProducts();
-  }, []);
+      } catch (err) { console.error('fetchSellerProducts error:', err); }
+      finally { setIsLoading(false); }
+    })();
+  }, [user, isSellerVerified]);
 
+  // Remaining hooks — all must be before early returns
   const [productSubTab, setProductSubTab] = useState<'active' | 'archived'>('active');
   const { rooms, sendMessage, markAsRead } = useChat();
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const chatScrollRef = useRef<HTMLDivElement>(null);
-
   const selectedRoom = useMemo(() => rooms.find(r => r.id === selectedRoomId), [rooms, selectedRoomId]);
 
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
+    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [selectedRoom?.messages]);
 
-  const handleSendReply = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!replyText.trim() || !selectedRoomId) return;
-    sendMessage(replyText);
-    setReplyText('');
-  };
-
-  // Products filter
   const filteredProducts = useMemo(() => {
     return myProducts.filter(p => {
       const matchesSearch = p.title.toLowerCase().includes(productSearch.toLowerCase());
@@ -104,15 +130,145 @@ const SellerDashboard: React.FC = () => {
     });
   }, [myProducts, productSearch, productSubTab]);
 
-  const handleArchive = (id: string) => {
-    setMyProducts(prev => prev.map(p => p.id === id ? { ...p, isArchived: !p.isArchived } : p));
+  // Real stats from seller's products
+  const sellerStats = useMemo(() => ({
+    totalProducts: myProducts.length,
+    totalStock: myProducts.reduce((s, p) => s + (p.stock || 0), 0),
+    avgRating: myProducts.length > 0
+      ? (myProducts.reduce((s, p) => s + (p.rating || 0), 0) / myProducts.length).toFixed(1)
+      : '—',
+  }), [myProducts]);
+
+  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const hasSales = sellerOrders.length > 0;
+
+  useEffect(() => {
+    if (!user || !isSellerVerified) return;
+    const productIds = myProducts.map((p: any) => p.id);
+
+    const fetchOrders = async () => {
+      if (productIds.length === 0) { setSellerOrders([]); return; }
+      const { data: items } = await supabase
+        .from('order_items').select('order_id').in('product_id', productIds);
+      const orderIds = [...new Set((items || []).map((i: any) => i.order_id))];
+      if (orderIds.length === 0) { setSellerOrders([]); return; }
+      const { data: orders } = await supabase
+        .from('orders').select('id, status, total_brl, created_at, buyer_id')
+        .in('id', orderIds).order('created_at', { ascending: false });
+      setSellerOrders(orders || []);
+    };
+
+    fetchOrders();
+
+    const channel = supabase.channel(`seller-orders-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, fetchOrders)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, isSellerVerified, myProducts]);
+
+  const handleArchive = (id: string) => setMyProducts(prev => prev.map(p => p.id === id ? { ...p, isArchived: !p.isArchived } : p));
+  const handleDelete = (id: string) => { if (confirm('Excluir permanentemente?')) setMyProducts(prev => prev.filter(p => p.id !== id)); };
+  const handleSendReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim() || !selectedRoomId) return;
+    sendMessage(replyText);
+    setReplyText('');
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir permanentemente este produto?')) {
-      setMyProducts(prev => prev.filter(p => p.id !== id));
-    }
-  };
+
+  // ── GATE: Loading spinner ───────────────────────────────────────────────────
+  if (profileLoading) return (
+
+    <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  // ── GATE: Seller onboarding (buyer trying to access) ───────────────────────
+  if (!isSellerVerified) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/40 py-16 px-4">
+      <div className="max-w-xl mx-auto">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5 shadow-xl shadow-indigo-200">🏪</div>
+          <span className="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3">Tornando-se Lojista</span>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-3">
+            Complete seu cadastro<br /><span className="text-indigo-600">e comece a vender</span>
+          </h1>
+          <p className="text-slate-500 font-medium max-w-sm mx-auto">Preencha os dados abaixo para ativar seu painel de lojista e vender no XTUDO Paraguai.</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[['🌎', 'Alcance Nacional', 'Venda para todo o Brasil'], ['📦', 'Logística Integrada', 'Rastreamento automático'], ['💸', 'Saque Rápido', 'Repasse em até 7 dias']].map(([icon, title, desc]) => (
+            <div key={title} className="bg-white rounded-2xl border border-slate-100 p-4 text-center shadow-sm">
+              <p className="text-2xl mb-2">{icon}</p>
+              <p className="font-black text-slate-800 text-xs">{title}</p>
+              <p className="text-slate-400 text-[10px] mt-0.5">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-8 space-y-5">
+          <div className="flex items-center gap-3 mb-1">
+            {([1, 2] as const).map(s => (
+              <div key={s} className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm ${regStep === s ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : regStep > s ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>{regStep > s ? '✓' : s}</div>
+                <span className={`text-xs font-bold ${regStep === s ? 'text-slate-800' : 'text-slate-400'}`}>{s === 1 ? 'Dados Pessoais' : 'Dados da Loja'}</span>
+                {s < 2 && <div className="w-6 h-px bg-slate-200" />}
+              </div>
+            ))}
+          </div>
+
+          {regStep === 1 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo *</label>
+                <input type="text" placeholder="Seu nome completo" value={regForm.full_name} onChange={e => setRegForm(f => ({ ...f, full_name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CNPJ / CPF *</label>
+                  <input type="text" placeholder="00.000.000/0001-00" value={regForm.document} onChange={e => setRegForm(f => ({ ...f, document: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone *</label>
+                  <input type="text" placeholder="(11) 99999-9999" value={regForm.phone} onChange={e => setRegForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+              </div>
+              <button onClick={() => setRegStep(2)} disabled={!regForm.full_name || !regForm.document || !regForm.phone} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                Próximo →
+              </button>
+            </div>
+          )}
+
+          {regStep === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Loja *</label>
+                <input type="text" placeholder="Ex: TechShop Paraguai" value={regForm.store_name} onChange={e => setRegForm(f => ({ ...f, store_name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição da Loja</label>
+                <textarea rows={3} placeholder="O que sua loja vende, diferenciais..." value={regForm.store_description} onChange={e => setRegForm(f => ({ ...f, store_description: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none" />
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-4 text-xs text-slate-500 leading-relaxed">
+                📋 Ao se cadastrar como lojista, você concorda em seguir as políticas do marketplace XTUDO, manter estoque atualizado e garantir a entrega dos produtos dentro do prazo.
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setRegStep(1)} className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">← Voltar</button>
+                <button onClick={handleSellerRegister} disabled={regLoading || !regForm.store_name} className="flex-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-40">
+                  {regLoading ? '⏳ Ativando...' : '🚀 Ativar Painel de Lojista'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+
+  // ── Full dashboard (only rendered for verified sellers) ────────────────────
+
 
   const handleOtimizar = async (product: any) => {
     setAnalyzingProductId(product.id);
@@ -127,11 +283,19 @@ const SellerDashboard: React.FC = () => {
 
   const RenderResume = () => (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {!isLoading && sellerStats.totalProducts === 0 && (
+        <div className="bg-white rounded-[32px] border border-slate-100 p-12 text-center shadow-sm">
+          <p className="text-5xl mb-4">🚀</p>
+          <h3 className="text-xl font-black text-slate-900 mb-2">Sua loja está pronta!</h3>
+          <p className="text-slate-400 font-medium max-w-sm mx-auto text-sm">Adicione seus primeiros produtos para começar a vender. As métricas aparecerão assim que você tiver pedidos.</p>
+          <button onClick={() => setActiveTab('products')} className="mt-6 bg-indigo-600 text-white font-black px-8 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">+ Adicionar Produtos</button>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardCard title="Vendas Hoje" value="R$ 8.120" change={12} icon="💰" />
-        <DashboardCard title="Pedidos Pendentes" value="14" change={-5} icon="📦" />
-        <DashboardCard title="Saldo a Receber" value="R$ 42.500" icon="💵" />
-        <DashboardCard title="Rating Loja" value="4.9/5.0" icon="⭐" />
+        <DashboardCard title="Produtos Ativos" value={isLoading ? '...' : String(sellerStats.totalProducts)} icon="📦" />
+        <DashboardCard title="Estoque Total" value={isLoading ? '...' : String(sellerStats.totalStock)} icon="🏪" />
+        <DashboardCard title="Pedidos Hoje" value="0" icon="🛒" />
+        <DashboardCard title="Rating Médio" value={isLoading ? '...' : `${sellerStats.avgRating}/5.0`} icon="⭐" />
       </div>
 
       {/* IA Insights Section */}
@@ -221,7 +385,7 @@ const SellerDashboard: React.FC = () => {
           />
         </div>
         <button
-          onClick={() => { window.location.hash = '#seller/products/new'; }}
+          onClick={() => setShowProductModal(true)}
           className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <svg xmlns="http://www.w3.org/2000/xl" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -349,125 +513,137 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 
-  const RenderOrders = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">A Enviar</p>
-          <p className="text-3xl font-black text-slate-900">08</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Em Trânsito</p>
-          <p className="text-3xl font-black text-blue-600">12</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Concluídos (Mês)</p>
-          <p className="text-3xl font-black text-emerald-500">142</p>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100 uppercase text-[9px] font-black text-slate-400 tracking-tighter">
-              <th className="px-6 py-4">Pedido / Data</th>
-              <th className="px-6 py-4">Cliente</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Total</th>
-              <th className="px-6 py-4 text-right">Ação</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {[
-              { id: '4291', buyer: 'Carla Silva', status: 'pago', date: 'Hoje, 14:20', total: 6890 },
-              { id: '4290', buyer: 'Marcos Oliveira', status: 'processando', date: 'Hoje, 11:05', total: 1280 },
-              { id: '4289', buyer: 'Ana Souza', status: 'enviado', date: 'Ontem', total: 3250 },
-              { id: '4288', buyer: 'Pedro Ferreira', status: 'pago', date: 'Ontem', total: 5900 },
-              { id: '4287', buyer: 'Juliana Lima', status: 'cancelado', date: '21 Fev', total: 120 },
-            ].map((order) => (
-              <tr key={order.id} className="hover:bg-slate-50/50">
-                <td className="px-6 py-4 text-xs font-bold">
-                  <span className="text-slate-800">#{order.id}</span>
-                  <p className="text-slate-400 font-medium">{order.date}</p>
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-700 text-sm">{order.buyer}</td>
-                <td className="px-6 py-4">
-                  <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${order.status === 'pago' ? 'bg-emerald-100 text-emerald-700' :
-                    order.status === 'enviado' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'cancelado' ? 'bg-rose-100 text-rose-700' :
-                        'bg-amber-100 text-amber-700'
-                    }`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-black text-slate-900 text-sm">R$ {order.total}</td>
-                <td className="px-6 py-4 text-right">
-                  <button className="text-indigo-600 font-black text-[10px] hover:underline">DETALHES</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const RenderFinancial = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[40px] p-10 text-white shadow-2xl shadow-emerald-200 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-20">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-40 w-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+  const RenderOrders = () => {
+    const toShip = sellerOrders.filter(o => o.status === 'paid' || o.status === 'pago').length;
+    const inTransit = sellerOrders.filter(o => o.status === 'enviado' || o.status === 'shipped').length;
+    const completed = sellerOrders.filter(o => o.status === 'entregue' || o.status === 'completed').length;
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">A Enviar</p>
+            <p className="text-3xl font-black text-slate-900">{toShip}</p>
           </div>
-          <p className="text-sm font-bold opacity-80 mb-2">Disponível para saque</p>
-          <h4 className="text-5xl font-black mb-10 tracking-tighter">R$ 14.820,50</h4>
-          <button className="w-full bg-white text-emerald-700 font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-50 transition-all active:scale-95">
-            Solicitar Saque PIX
-          </button>
-        </div>
-        <div className="bg-white rounded-[40px] border-2 border-slate-100 p-10 shadow-sm flex flex-col justify-between">
-          <div>
-            <p className="text-sm font-bold text-slate-400 mb-2">Lançamentos Futuros</p>
-            <h4 className="text-4xl font-black text-slate-900 tracking-tighter">R$ 27.680,22</h4>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Em Trânsito</p>
+            <p className="text-3xl font-black text-blue-600">{inTransit}</p>
           </div>
-          <div className="mt-8 pt-8 border-t border-slate-100">
-            <div className="flex justify-between items-center text-sm mb-4">
-              <span className="text-slate-500 font-medium">Próximo pagamento</span>
-              <span className="text-slate-900 font-black">28 de Fev</span>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Concluídos</p>
+            <p className="text-3xl font-black text-emerald-500">{completed}</p>
+          </div>
+        </div>
+
+        {!hasSales ? (
+          <div className="bg-white border border-slate-100 rounded-3xl p-16 text-center shadow-sm">
+            <p className="text-5xl mb-4">📦</p>
+            <h4 className="font-black text-slate-800 text-lg mb-2">Nenhum pedido ainda</h4>
+            <p className="text-slate-400 text-sm">Quando um cliente comprar um produto seu, o pedido aparecerá aqui em tempo real.</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100 uppercase text-[9px] font-black text-slate-400 tracking-tighter">
+                  <th className="px-6 py-4">Pedido / Data</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Total</th>
+                  <th className="px-6 py-4 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {sellerOrders.map(order => (
+                  <tr key={order.id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 text-xs font-bold">
+                      <span className="text-slate-800">#{order.id.slice(0, 8)}</span>
+                      <p className="text-slate-400 font-medium">{new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${['paid', 'pago'].includes(order.status) ? 'bg-emerald-100 text-emerald-700' :
+                        ['enviado', 'shipped'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
+                          ['cancelado', 'cancelled'].includes(order.status) ? 'bg-rose-100 text-rose-700' :
+                            'bg-amber-100 text-amber-700'
+                        }`}>{order.status}</span>
+                    </td>
+                    <td className="px-6 py-4 font-black text-slate-900 text-sm">R$ {Number(order.total_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-indigo-600 font-black text-[10px] hover:underline">DETALHES</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const RenderFinancial = () => {
+    const totalRevenue = sellerOrders
+      .filter(o => !['cancelado', 'cancelled'].includes(o.status))
+      .reduce((s: number, o: any) => s + Number(o.total_brl), 0);
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[40px] p-10 text-white shadow-2xl shadow-emerald-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-20">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-40 w-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Taxas e comissões (Mês)</span>
-              <span className="text-rose-500 font-bold">- R$ 3.420</span>
-            </div>
+            <p className="text-sm font-bold opacity-80 mb-2">Receita Total Acumulada</p>
+            <h4 className="text-5xl font-black mb-10 tracking-tighter">
+              {hasSales ? `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
+            </h4>
+            <button disabled={!hasSales} className="w-full bg-white text-emerald-700 font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+              Solicitar Saque PIX
+            </button>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <h3 className="text-lg font-bold text-slate-800 mb-6 font-primary">Histórico de Movimentações</h3>
-        <div className="space-y-4">
-          {[
-            { date: '22 Fev', desc: 'Venda Pedido #4291', value: 6890, type: 'plus' },
-            { date: '21 Fev', desc: 'Saque PIX Efetuado', value: 12000, type: 'minus' },
-            { date: '21 Fev', desc: 'Venda Pedido #4289', value: 3250, type: 'plus' },
-            { date: '20 Fev', desc: 'Taxa Publicidade Premium', value: 450, type: 'minus' },
-          ].map((move, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-400 w-12">{move.date}</span>
-                <p className="text-sm font-bold text-slate-700">{move.desc}</p>
+          <div className="bg-white rounded-[40px] border-2 border-slate-100 p-10 shadow-sm flex flex-col justify-between">
+            <div>
+              <p className="text-sm font-bold text-slate-400 mb-2">A Receber (pedidos pendentes)</p>
+              <h4 className="text-4xl font-black text-slate-900 tracking-tighter">
+                {hasSales ? `R$ ${sellerOrders.filter(o => ['paid', 'pago', 'processando'].includes(o.status)).reduce((s: number, o: any) => s + Number(o.total_brl), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
+              </h4>
+            </div>
+            <div className="mt-8 pt-8 border-t border-slate-100">
+              <div className="flex justify-between items-center text-sm mb-4">
+                <span className="text-slate-500 font-medium">Total de pedidos</span>
+                <span className="text-slate-900 font-black">{sellerOrders.length}</span>
               </div>
-              <p className={`text-sm font-black ${move.type === 'plus' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {move.type === 'plus' ? '+' : '-'} R$ {move.value.toLocaleString()}
-              </p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-medium">Cancelados</span>
+                <span className="text-rose-500 font-bold">{sellerOrders.filter(o => ['cancelado', 'cancelled'].includes(o.status)).length}</span>
+              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Histórico de Movimentações</h3>
+          {!hasSales ? (
+            <div className="text-center py-12">
+              <p className="text-4xl mb-3">💸</p>
+              <p className="text-slate-400 text-sm font-bold">Nenhuma movimentação ainda.<br />Suas vendas aparecerão aqui.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sellerOrders.slice(0, 6).map((o: any) => (
+                <div key={o.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-black text-slate-400 w-12">{new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                    <p className="text-sm font-bold text-slate-700">Venda #{o.id.slice(0, 8)}</p>
+                  </div>
+                  <p className="text-sm font-black text-emerald-500">+ R$ {Number(o.total_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const RenderMessages = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[650px] animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -612,53 +788,278 @@ const SellerDashboard: React.FC = () => {
     </div>
   );
 
+  const RenderAnalytics = () => {
+    const totalRevenue = sellerOrders.reduce((s: number, o: any) => s + Number(o.total_brl), 0);
+    const avgTicket = sellerOrders.length > 0 ? totalRevenue / sellerOrders.length : 0;
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <DashboardCard title="Receita Total" value={hasSales ? `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'} icon="📈" />
+          <DashboardCard title="Total de Pedidos" value={String(sellerOrders.length)} icon="🛒" />
+          <DashboardCard title="Ticket Médio" value={hasSales ? `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'} icon="🎯" />
+          <DashboardCard title="Produtos" value={String(myProducts.length)} icon="📦" />
+        </div>
+
+        {!hasSales ? (
+          <div className="bg-white border border-slate-100 rounded-3xl p-20 text-center shadow-sm">
+            <p className="text-5xl mb-4">📊</p>
+            <h4 className="font-black text-slate-800 text-xl mb-2">Sem dados ainda</h4>
+            <p className="text-slate-400 text-sm max-w-sm mx-auto">Seus gráficos de performance e produtos mais vendidos aparecerão aqui assim que você realizar sua primeira venda.</p>
+            <button onClick={() => setActiveTab('products')} className="mt-6 bg-indigo-600 text-white font-black px-8 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Ver meus Produtos →</button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+            <h3 className="font-black text-slate-900 text-lg mb-6">Pedidos por Status</h3>
+            <div className="space-y-4">
+              {['✅ Pagos', '🚚 Enviados', '❌ Cancelados', '⏳ Processando'].map((label, i) => {
+                const statuses = [['paid', 'pago'], ['enviado', 'shipped'], ['cancelado', 'cancelled'], ['processando', 'processing']];
+                const count = sellerOrders.filter(o => statuses[i].includes(o.status)).length;
+                const pct = sellerOrders.length > 0 ? Math.round(count / sellerOrders.length * 100) : 0;
+                return (
+                  <div key={label} className="flex items-center gap-4">
+                    <span className="text-sm font-bold text-slate-600 w-32">{label}</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-sm font-black text-slate-800 w-8 text-right">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── Main Render ─────────────────────────────────────────────────────────────
 
+  const sellerNavItems = [
+    { id: 'resume' as SellerTab, icon: '📊', label: 'Resumo' },
+    { id: 'products' as SellerTab, icon: '📦', label: 'Produtos' },
+    { id: 'orders' as SellerTab, icon: '🛒', label: 'Pedidos' },
+    { id: 'messages' as SellerTab, icon: '💬', label: 'Mensagens' },
+    { id: 'logistics' as SellerTab, icon: '🚚', label: 'Envios' },
+    { id: 'financial' as SellerTab, icon: '💰', label: 'Financeiro' },
+    { id: 'analytics' as SellerTab, icon: '📈', label: 'Analytics' },
+  ];
+
+  const handleCreateProduct = async () => {
+    if (!user || !productForm.title || !productForm.price_brl || !selectedL3) return;
+    setProductSaving(true);
+    try {
+      // Fazer upload das fotos primeiro (se houver)
+      const imageUrls: string[] = [];
+      for (const file of productImageFiles) {
+        const path = `${user.id}/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+        const { error: upErr } = await supabase.storage
+          .from('product-images')
+          .upload(path, file, { upsert: true });
+        if (upErr) {
+          console.warn('Falha no upload da imagem:', upErr.message);
+        } else {
+          const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+          if (urlData?.publicUrl) imageUrls.push(urlData.publicUrl);
+        }
+      }
+
+      const result = await createProduct({
+        seller_id: user.id,
+        title: productForm.title,
+        category_name: `${selectedL1} > ${selectedL2} > ${selectedL3}`,
+        description: productForm.description,
+        price_brl: Number(productForm.price_brl),
+        compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
+        stock: Number(productForm.stock) || 1,
+        images: imageUrls,
+      });
+
+      if (result) {
+        // showToast is injected automatically in some areas via context, assume success notification
+        setShowProductModal(false);
+        setProductForm({ title: '', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
+        setSelectedL1(''); setSelectedL2(''); setSelectedL3('');
+        setProductImageFiles([]);
+        // Atualizar lista de produtos
+        const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
+        if (data) setMyProducts(data.map((p: any) => ({
+          id: p.id, sellerId: p.seller_id, sellerName: p.seller_name ?? '', category: p.category,
+          title: p.title, description: p.description, priceBRL: Number(p.price_brl),
+          comparePriceBRL: Number(p.compare_price_brl || p.price_brl), stock: p.stock, rating: Number(p.rating ?? 0),
+          images: p.images ?? [], specs: p.specs ?? [], isVerified: p.is_verified,
+        })));
+      } else {
+        alert('Falha ao publicar produto. Verifique o console.');
+      }
+    } catch (err: any) {
+      console.error('[handleCreateProduct]', err);
+      alert(`Erro: ${err?.message ?? 'Tente novamente.'}`);
+    } finally {
+      setProductSaving(false);
+    }
+  };
+
+  const typedCategories = SUPPLIER_CATEGORIES as Record<string, Record<string, string[]>>;
+  const l1Options = Object.keys(typedCategories).sort();
+  const l2Options = selectedL1 && typedCategories[selectedL1] ? Object.keys(typedCategories[selectedL1]).sort() : [];
+  const l3Options = selectedL2 && typedCategories[selectedL1]?.[selectedL2] ? typedCategories[selectedL1][selectedL2].sort() : [];
+
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 mb-12">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest shadow-sm shadow-indigo-200">Platinum Seller</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-xs text-slate-500 font-bold flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                </svg>
-                Ciudad del Este, PY
+    <div className="min-h-screen bg-slate-50/60">
+      <div className="max-w-7xl mx-auto px-4 py-10">
+
+        {/* Product Creation Modal */}
+        {showProductModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={e => e.target === e.currentTarget && setShowProductModal(false)}>
+            <div className="bg-white rounded-t-[32px] sm:rounded-[32px] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-t-[32px] sm:rounded-t-[32px]">
+                <h3 className="text-white font-black text-lg">✨ Cadastrar Novo Produto</h3>
+                <p className="text-white/60 text-sm mt-0.5">Preencha os dados do produto para publicar na XTUDO</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Produto *</label>
+                  <input type="text" placeholder="Ex: iPhone 15 Pro 256GB Preto" value={productForm.title} onChange={e => setProductForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Depto *</label>
+                    <select value={selectedL1} onChange={e => { setSelectedL1(e.target.value); setSelectedL2(''); setSelectedL3(''); }} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+                      <option value="">Selecione...</option>
+                      {l1Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria *</label>
+                    <select value={selectedL2} onChange={e => { setSelectedL2(e.target.value); setSelectedL3(''); }} disabled={!selectedL1} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none ring-2 ring-transparent focus:ring-indigo-100 disabled:opacity-50">
+                      <option value="">Selecione...</option>
+                      {l2Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subcat. *</label>
+                    <select value={selectedL3} onChange={e => setSelectedL3(e.target.value)} disabled={!selectedL2} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none ring-2 ring-transparent focus:ring-indigo-100 disabled:opacity-50">
+                      <option value="">Selecione...</option>
+                      {l3Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (R$) *</label>
+                    <input type="number" min="0" step="0.01" placeholder="0,00" value={productForm.price_brl} onChange={e => setProductForm(f => ({ ...f, price_brl: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço Original (R$)</label>
+                    <input type="number" min="0" step="0.01" placeholder="0,00" value={productForm.compare_price_brl} onChange={e => setProductForm(f => ({ ...f, compare_price_brl: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantidade em Estoque *</label>
+                  <input type="number" min="1" placeholder="1" value={productForm.stock} onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fotos do Produto (máx. 5)</label>
+                  <label className="flex flex-col items-center justify-center w-full h-28 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={e => {
+                      const files = Array.from(e.target.files || []).slice(0, 5);
+                      setProductImageFiles(files);
+                    }} />
+                    <span className="text-3xl mb-1">📸</span>
+                    <span className="text-xs font-bold text-slate-500">Clique para selecionar</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WEBP • Até 5 imagens</span>
+                  </label>
+                  {productImageFiles.length > 0 && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {productImageFiles.map((f, i) => (
+                        <div key={i} className="relative group">
+                          <img src={URL.createObjectURL(f)} alt={`preview-${i}`} className="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm" />
+                          <button type="button" onClick={() => setProductImageFiles(prev => prev.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full w-4 h-4 text-[9px] font-black flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity">x</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                  <textarea rows={3} placeholder="Descreva o produto..." value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none" />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowProductModal(false)} className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">Cancelar</button>
+                  <button onClick={handleCreateProduct} disabled={productSaving || !productForm.title || !productForm.price_brl || !selectedL3} className="flex-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-40">
+                    {productSaving ? '⏳ Publicando...' : '🚀 Publicar Produto'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[28px] p-6 mb-8 flex items-center gap-5 shadow-xl shadow-indigo-200/50 relative overflow-hidden">
+          <div className="absolute inset-0 bg-white/5 pointer-events-none" />
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-black text-white shadow-lg flex-shrink-0 border border-white/20">
+            {sellerDisplayName[0]?.toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-black text-lg leading-tight truncate">{sellerDisplayName}</p>
+            <p className="text-white/60 text-sm font-medium truncate">{user?.email}</p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="inline-flex items-center gap-1 bg-white/15 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+                🏪 {sellerProfile?.store_name || 'Lojista'}
               </span>
             </div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Jorge Tech <span className="text-indigo-600">Dashboard</span></h1>
-            <p className="text-slate-500 font-medium">Bem-vindo de volta, você alcançou <span className="text-emerald-500 font-black">98%</span> das metas mensais.</p>
           </div>
-
-          <div className="bg-white border-2 border-slate-100 rounded-3xl p-1 shadow-sm flex items-center overflow-x-auto">
-            {(['resume', 'products', 'orders', 'messages', 'logistics', 'financial'] as SellerTab[]).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-5 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-tighter whitespace-nowrap ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                {tab === 'resume' ? 'Resumo' : tab === 'products' ? 'Produtos' : tab === 'orders' ? 'Pedidos' : tab === 'messages' ? 'Mensagens' : tab === 'logistics' ? 'Envios' : 'Financeiro'}
-              </button>
-            ))}
+          <div className="flex-shrink-0 text-right hidden sm:block">
+            <p className="text-white/50 text-[10px] uppercase tracking-widest font-black">Produtos</p>
+            <p className="text-white font-black text-2xl">{myProducts.length}</p>
+            <p className="text-white/50 text-[10px]">cadastrados</p>
           </div>
         </div>
 
-        {/* Dynamic Content */}
-        <main>
-          {activeTab === 'resume' && <RenderResume />}
-          {activeTab === 'products' && <RenderProducts />}
-          {activeTab === 'orders' && <RenderOrders />}
-          {activeTab === 'messages' && <RenderMessages />}
-          {activeTab === 'financial' && <RenderFinancial />}
-          {activeTab === 'logistics' && <RenderOrders />} {/* Mocking logistics with same order UI for now */}
-        </main>
+        <div className="flex flex-col lg:flex-row gap-6">
+
+          {/* Mobile nav grid */}
+          <div className="lg:hidden grid grid-cols-7 gap-1.5 bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
+            {sellerNavItems.map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-[7px] font-black uppercase tracking-tight leading-none">{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:flex flex-col w-56 flex-shrink-0">
+            <nav className="flex flex-col gap-1 bg-white rounded-[24px] border border-slate-100 shadow-sm p-3 sticky top-6">
+              {sellerNavItems.map(item => (
+                <button key={item.id} onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+                  <span className="text-base">{item.icon}</span>
+                  <span className="uppercase tracking-tight text-[11px] font-black">{item.label}</span>
+                  {activeTab === item.id && (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 ml-auto opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 min-w-0">
+            {activeTab === 'resume' && <RenderResume />}
+            {activeTab === 'products' && <RenderProducts />}
+            {activeTab === 'orders' && <RenderOrders />}
+            {activeTab === 'messages' && <RenderMessages />}
+            {activeTab === 'financial' && <RenderFinancial />}
+            {activeTab === 'logistics' && <RenderOrders />}
+            {activeTab === 'analytics' && <RenderAnalytics />}
+          </main>
+        </div>
       </div>
     </div>
   );
 };
 
 export default SellerDashboard;
+

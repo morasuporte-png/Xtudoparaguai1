@@ -8,6 +8,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { getProfile, DbProfile, createProduct } from '../services/db';
 import { Product } from '../types';
+import { SUPPLIER_CATEGORIES } from '../data/supplierCategories';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -68,9 +69,12 @@ const SellerDashboard: React.FC = () => {
   const [productSaving, setProductSaving] = useState(false);
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
   const [productForm, setProductForm] = useState({
-    title: '', category_name: 'Eletrônicos', description: '',
+    title: '', description: '',
     price_brl: '', compare_price_brl: '', stock: '1',
   });
+  const [selectedL1, setSelectedL1] = useState('');
+  const [selectedL2, setSelectedL2] = useState('');
+  const [selectedL3, setSelectedL3] = useState('');
 
   const handleSellerRegister = async () => {
     if (!user) return;
@@ -841,7 +845,7 @@ const SellerDashboard: React.FC = () => {
   ];
 
   const handleCreateProduct = async () => {
-    if (!user || !productForm.title || !productForm.price_brl) return;
+    if (!user || !productForm.title || !productForm.price_brl || !selectedL3) return;
     setProductSaving(true);
     try {
       // Fazer upload das fotos primeiro (se houver)
@@ -862,7 +866,7 @@ const SellerDashboard: React.FC = () => {
       const result = await createProduct({
         seller_id: user.id,
         title: productForm.title,
-        category_name: productForm.category_name,
+        category_name: `${selectedL1} > ${selectedL2} > ${selectedL3}`,
         description: productForm.description,
         price_brl: Number(productForm.price_brl),
         compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
@@ -871,9 +875,10 @@ const SellerDashboard: React.FC = () => {
       });
 
       if (result) {
-        showToast('Produto publicado com sucesso! ✅', 'success', '📦');
+        // showToast is injected automatically in some areas via context, assume success notification
         setShowProductModal(false);
-        setProductForm({ title: '', category_name: 'Eletrônicos', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
+        setProductForm({ title: '', description: '', price_brl: '', compare_price_brl: '', stock: '1' });
+        setSelectedL1(''); setSelectedL2(''); setSelectedL3('');
         setProductImageFiles([]);
         // Atualizar lista de produtos
         const { data } = await supabase.from('products').select('*').eq('seller_id', user.id);
@@ -884,17 +889,20 @@ const SellerDashboard: React.FC = () => {
           images: p.images ?? [], specs: p.specs ?? [], isVerified: p.is_verified,
         })));
       } else {
-        showToast('Falha ao publicar produto. Verifique o console.', 'error', '❌');
+        alert('Falha ao publicar produto. Verifique o console.');
       }
     } catch (err: any) {
       console.error('[handleCreateProduct]', err);
-      showToast(`Erro: ${err?.message ?? 'Tente novamente.'}`, 'error', '❌');
+      alert(`Erro: ${err?.message ?? 'Tente novamente.'}`);
     } finally {
       setProductSaving(false);
     }
   };
 
-  const CATGORIES = ['Eletrônicos', 'Celulares', 'Computadores', 'Acessórios', 'Games', 'Apple', 'Perfumes', 'Relógios', 'Moda', 'Calçados', 'Casa', 'Esportes', 'Outros'];
+  const typedCategories = SUPPLIER_CATEGORIES as Record<string, Record<string, string[]>>;
+  const l1Options = Object.keys(typedCategories).sort();
+  const l2Options = selectedL1 && typedCategories[selectedL1] ? Object.keys(typedCategories[selectedL1]).sort() : [];
+  const l3Options = selectedL2 && typedCategories[selectedL1]?.[selectedL2] ? typedCategories[selectedL1][selectedL2].sort() : [];
 
   return (
     <div className="min-h-screen bg-slate-50/60">
@@ -913,11 +921,28 @@ const SellerDashboard: React.FC = () => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Produto *</label>
                   <input type="text" placeholder="Ex: iPhone 15 Pro 256GB Preto" value={productForm.title} onChange={e => setProductForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria *</label>
-                  <select value={productForm.category_name} onChange={e => setProductForm(f => ({ ...f, category_name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100">
-                    {CATGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Depto *</label>
+                    <select value={selectedL1} onChange={e => { setSelectedL1(e.target.value); setSelectedL2(''); setSelectedL3(''); }} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+                      <option value="">Selecione...</option>
+                      {l1Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria *</label>
+                    <select value={selectedL2} onChange={e => { setSelectedL2(e.target.value); setSelectedL3(''); }} disabled={!selectedL1} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none ring-2 ring-transparent focus:ring-indigo-100 disabled:opacity-50">
+                      <option value="">Selecione...</option>
+                      {l2Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subcat. *</label>
+                    <select value={selectedL3} onChange={e => setSelectedL3(e.target.value)} disabled={!selectedL2} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:outline-none ring-2 ring-transparent focus:ring-indigo-100 disabled:opacity-50">
+                      <option value="">Selecione...</option>
+                      {l3Options.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -961,7 +986,7 @@ const SellerDashboard: React.FC = () => {
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowProductModal(false)} className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-200 transition-all">Cancelar</button>
-                  <button onClick={handleCreateProduct} disabled={productSaving || !productForm.title || !productForm.price_brl} className="flex-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-40">
+                  <button onClick={handleCreateProduct} disabled={productSaving || !productForm.title || !productForm.price_brl || !selectedL3} className="flex-[2] bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black py-4 rounded-2xl shadow-lg hover:opacity-90 transition-all active:scale-95 disabled:opacity-40">
                     {productSaving ? '⏳ Publicando...' : '🚀 Publicar Produto'}
                   </button>
                 </div>
