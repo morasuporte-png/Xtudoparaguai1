@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
+import { CATEGORY_MAP } from '../constants';
 import Logo from './Logo';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
@@ -117,6 +118,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [country, setCountry] = useState<CountryCode>('BR');
   const [countryOpen, setCountryOpen] = useState(false);
+  const [deptHover, setDeptHover] = useState<string | null>(null);
+  const [subHover, setSubHover] = useState<string | null>(null);
   const [deptOpen, setDeptOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut } = useAuth();
@@ -317,10 +320,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
         {/* ── DEPARTMENT MENU BAR (Amazon-style) */}
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-1.5 hidden md:flex items-center gap-1 border-t border-slate-100 relative">
           {/* "Todos" dropdown button */}
-          <div className="relative flex-shrink-0">
+          <div 
+            className="relative flex-shrink-0"
+            onMouseEnter={() => setDeptOpen(true)}
+            onMouseLeave={() => { setDeptOpen(false); setDeptHover(null); setSubHover(null); }}
+          >
             <button
               onClick={() => setDeptOpen(v => !v)}
-              onMouseEnter={() => setDeptOpen(true)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all ${deptOpen ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,23 +340,86 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
             {/* Dropdown */}
             {deptOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} onMouseLeave={() => setDeptOpen(false)} />
+                <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} />
+                {/* Advanced Mega Menu Dropdown */}
                 <div
-                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[220px] py-2"
-                  onMouseEnter={() => setDeptOpen(true)}
-                  onMouseLeave={() => setDeptOpen(false)}
+                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex shadow-indigo-100/50 min-h-[400px]"
                 >
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-4 pt-1 pb-2">Departamentos</p>
-                  {DEPT_MENU.map(dept => (
-                    <button
-                      key={dept.label}
-                      onClick={() => { window.location.hash = dept.hash; setDeptOpen(false); }}
-                      className="group w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
-                    >
-                      <span className="text-slate-400 group-hover:text-indigo-600 transition-colors">{dept.icon}</span>
-                      {dept.label}
-                    </button>
-                  ))}
+                  {/* Coluna 1: Departamentos */}
+                  <div className="w-72 bg-slate-50 border-r border-slate-100 py-2 flex-shrink-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-5 pt-3 pb-2">Departamentos</p>
+                    {Object.entries(CATEGORY_MAP).map(([slug, meta]) => (
+                      <div
+                        key={slug}
+                        onMouseEnter={() => { setDeptHover(slug); setSubHover(null); }}
+                        className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-bold transition-colors cursor-pointer ${deptHover === slug ? 'bg-white text-indigo-700 shadow-sm border-l-4 border-indigo-600' : 'text-slate-700 hover:bg-slate-100 border-l-4 border-transparent'
+                          }`}
+                        onClick={() => { window.location.hash = `#category/${slug}`; setDeptOpen(false); }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`${deptHover === slug ? 'text-indigo-600' : 'text-slate-400'}`}>{meta.iconPath}</span>
+                          {meta.label}
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === slug ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Coluna 2: Subcategorias */}
+                  {deptHover && CATEGORY_MAP[deptHover] && CATEGORY_MAP[deptHover].subCategories && CATEGORY_MAP[deptHover].subCategories.length > 0 && (
+                    <div className="w-72 bg-white border-r border-slate-100 py-2 flex-shrink-0">
+                      <div className="px-5 pt-3 pb-3 border-b border-slate-50 flex items-center gap-2 mb-2">
+                        <span className="text-indigo-600 w-5 h-5">{CATEGORY_MAP[deptHover].iconPath}</span>
+                        <h3 className="font-extrabold text-sm text-slate-800">{CATEGORY_MAP[deptHover].label}</h3>
+                      </div>
+                      <div className="overflow-y-auto max-h-[60vh]">
+                        {CATEGORY_MAP[deptHover].subCategories.map(sub => (
+                          <div
+                            key={sub.id}
+                            onMouseEnter={() => setSubHover(sub.id)}
+                            className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-semibold transition-colors cursor-pointer ${subHover === sub.id ? 'bg-indigo-50/50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+                              }`}
+                            onClick={() => { window.location.hash = `#category/${deptHover}/${sub.id}`; setDeptOpen(false); }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {sub.icon && <span className="text-slate-400 w-4 h-4">{sub.icon}</span>}
+                              {sub.label}
+                            </div>
+                            {sub.children && sub.children.length > 0 && (
+                              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${subHover === sub.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Coluna 3: Sub-subcategorias (Netos) */}
+                  {deptHover && subHover && CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.children && CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)!.children!.length > 0 && (
+                    <div className="w-72 bg-white py-2 flex-shrink-0">
+                      <div className="px-5 pt-3 pb-3 border-b border-slate-50 flex items-center gap-2 mb-2">
+                        {CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.icon && (
+                           <span className="text-slate-400 w-4 h-4">{CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.icon}</span>
+                        )}
+                        <h3 className="font-extrabold text-sm text-slate-800">{CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.label}</h3>
+                      </div>
+                      <div className="overflow-y-auto max-h-[60vh] px-3 space-y-1">
+                        {CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.children?.map(child => (
+                          <div
+                            key={child.id}
+                            className="w-full flex items-center px-3 py-2 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                            onClick={() => { window.location.hash = `#category/${deptHover}/${subHover}/${child.id}`; setDeptOpen(false); }}
+                          >
+                            {child.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -476,14 +545,34 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
 
           {/* Links */}
           {[
-            { title: 'Plataforma', links: ['Como funciona', 'Segurança & Trust', 'Logística', 'Sellers Verificados'] },
-            { title: 'Empresa', links: ['Sobre nós', 'Carreiras', 'Contato'] },
+            {
+              title: 'Plataforma',
+              links: [
+                { label: 'Como funciona', href: '#como-funciona' },
+                { label: 'Segurança & Trust', href: '#seguranca' },
+                { label: 'Logística', href: '#logistica' },
+                { label: 'Rastrear Pedido', href: '#track-order' },
+                { label: 'Sellers Verificados', href: '#sellers-verificados' }
+              ]
+            },
+            {
+              title: 'Empresa',
+              links: [
+                { label: 'Sobre nós', href: '#sobre-nos' },
+                { label: 'Carreiras', href: '#carreiras' },
+                { label: 'Contato', href: '#contato' }
+              ]
+            },
           ].map(section => (
             <div key={section.title}>
               <h4 className="text-white font-black text-sm mb-4 uppercase tracking-widest">{section.title}</h4>
               <ul className="space-y-2.5">
                 {section.links.map(l => (
-                  <li key={l}><a href="#" className="text-sm hover:text-white hover:translate-x-0.5 transition-all inline-block">{l}</a></li>
+                  <li key={l.label}>
+                    <a href={l.href} className="text-sm hover:text-white hover:translate-x-0.5 transition-all inline-block">
+                      {l.label}
+                    </a>
+                  </li>
                 ))}
                 {section.title === 'Empresa' && (
                   <li>

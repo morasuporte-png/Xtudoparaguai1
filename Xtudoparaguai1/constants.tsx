@@ -220,7 +220,13 @@ export interface CategoryMeta {
   label: string;
   gradient: string;          // Tailwind gradient classes for hero
   iconPath: React.ReactNode;
-  subCategories: { label: string; icon: React.ReactNode; id: string; img?: string }[];
+  subCategories: {
+    label: string;
+    icon: React.ReactNode;
+    id: string;
+    img?: string;
+    children?: { id: string; label: string }[];
+  }[];
   brands: { name: string; logo: React.ReactNode }[];
   productFilter: string;     // matches Product.category substring
   premiumHero?: {
@@ -258,11 +264,11 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
     label: 'Celulares & Tablets', gradient: 'from-indigo-600 to-blue-700',
     iconPath: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>,
     subCategories: [
-      { id: 'iphone', label: 'iPhone', img: 'https://images.unsplash.com/photo-1696446702183-f3ec08b7df5d?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 20.94c1.88-1.58 3-4.13 3-6.94 0-4.42-3-8-3-8s-3 3.58-3 8c0 2.81 1.12 5.36 3 6.94z" /></svg> },
-      { id: 'samsung', label: 'Samsung', img: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="5" y="2" width="14" height="20" rx="2" /></svg> },
-      { id: 'xiaomi', label: 'Xiaomi', img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg> },
-      { id: 'motorola', label: 'Motorola', img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M18 8a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3z" /><path d="M13 22V11" /></svg> },
-      { id: 'tablet', label: 'Tablets', img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="4" y="2" width="16" height="20" rx="2" /></svg> },
+      { id: 'iphone', label: 'iPhone', img: 'https://images.unsplash.com/photo-1696446702183-f3ec08b7df5d?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 20.94c1.88-1.58 3-4.13 3-6.94 0-4.42-3-8-3-8s-3 3.58-3 8c0 2.81 1.12 5.36 3 6.94z" /></svg>, children: [{ id: 'ip15', label: 'iPhone 15 Series' }, { id: 'ip14', label: 'iPhone 14 Series' }, { id: 'ip13', label: 'iPhone 13 Series' }] },
+      { id: 'samsung', label: 'Samsung', img: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="5" y="2" width="14" height="20" rx="2" /></svg>, children: [{ id: 's24', label: 'Galaxy S24 Series' }, { id: 's23', label: 'Galaxy S23 Series' }, { id: 'zfold', label: 'Galaxy Z Fold/Flip' }] },
+      { id: 'xiaomi', label: 'Xiaomi', img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>, children: [{ id: 'mi14', label: 'Xiaomi 14 Series' }, { id: 'poco', label: 'Linha POCO' }, { id: 'redmi', label: 'Redmi Note' }] },
+      { id: 'motorola', label: 'Motorola', img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M18 8a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3z" /><path d="M13 22V11" /></svg>, children: [{ id: 'edge', label: 'Linha Edge' }, { id: 'motog', label: 'Moto G Series' }] },
+      { id: 'tablet', label: 'Tablets', img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="4" y="2" width="16" height="20" rx="2" /></svg>, children: [{ id: 'ipadmini', label: 'iPad Mini' }, { id: 'ipadpro', label: 'iPad Pro' }, { id: 'galtab', label: 'Galaxy Tab S' }] },
     ],
     brands: [
       { name: 'Apple', logo: '' }, { name: 'Samsung', logo: 'S' },
@@ -284,14 +290,14 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
     }
   },
   'apple': {
-    label: 'Mundo Apple', gradient: 'from-slate-700 to-black',
+    label: 'Produtos Apple', gradient: 'from-slate-700 to-black',
     iconPath: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
     subCategories: [
-      { id: 'iphone', label: 'iPhone', img: 'https://images.unsplash.com/photo-1695048132625-0a6df571e74d?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="5" y="2" width="14" height="20" rx="2" /></svg> },
-      { id: 'mac', label: 'MacBook', img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9" /><path d="M1 16h22v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" /></svg> },
-      { id: 'ipad', label: 'iPad', img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="4" y="2" width="16" height="20" rx="2" /></svg> },
-      { id: 'watch', label: 'Watch', img: 'https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="7" /><path d="M12 9v3l1.5 1.5" /><path d="M16 17.5l-0.3 3.5a2 2 0 0 1-2 1.5H10.3a2 2 0 0 1-2-1.5l-0.3-3.5" /><path d="M16 6.5l-0.3-3.5a2 2 0 0 0-2-1.5H10.3a2 2 0 0 0-2 1.5l-0.3 3.5" /></svg> },
-      { id: 'airpods', label: 'AirPods', img: 'https://images.unsplash.com/photo-1588423771073-b8903fead714?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 18v-6a9 9 0 0 1 18 0v6" /></svg> },
+      { id: 'iphone', label: 'iPhone', img: 'https://images.unsplash.com/photo-1695048132625-0a6df571e74d?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="5" y="2" width="14" height="20" rx="2" /></svg>, children: [{ id: 'ip15', label: 'iPhone 15 Series' }, { id: 'ip14', label: 'iPhone 14 Series' }] },
+      { id: 'mac', label: 'MacBook', img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9" /><path d="M1 16h22v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" /></svg>, children: [{ id: 'air', label: 'MacBook Air' }, { id: 'pro', label: 'MacBook Pro' }] },
+      { id: 'ipad', label: 'iPad', img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="4" y="2" width="16" height="20" rx="2" /></svg>, children: [{ id: 'ipadmini', label: 'iPad Mini' }, { id: 'ipadpro', label: 'iPad Pro' }, { id: 'ipadair', label: 'iPad Air' }] },
+      { id: 'watch', label: 'Watch', img: 'https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="7" /><path d="M12 9v3l1.5 1.5" /><path d="M16 17.5l-0.3 3.5a2 2 0 0 1-2 1.5H10.3a2 2 0 0 1-2-1.5l-0.3-3.5" /><path d="M16 6.5l-0.3-3.5a2 2 0 0 0-2-1.5H10.3a2 2 0 0 0-2 1.5l-0.3 3.5" /></svg>, children: [{ id: 'awse', label: 'Watch SE' }, { id: 'aw9', label: 'Watch Series 9' }, { id: 'awultra', label: 'Watch Ultra' }] },
+      { id: 'airpods', label: 'AirPods', img: 'https://images.unsplash.com/photo-1588423771073-b8903fead714?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 18v-6a9 9 0 0 1 18 0v6" /></svg>, children: [{ id: 'ap3', label: 'AirPods 3' }, { id: 'appro', label: 'AirPods Pro' }, { id: 'apmax', label: 'AirPods Max' }] },
     ],
     brands: [{ name: 'Apple', logo: '' }],
     productFilter: 'Apple',
@@ -466,6 +472,21 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
       { name: 'Electrolux', logo: 'E' }, { name: 'Xiaomi', logo: 'X' },
     ],
     productFilter: 'Casa',
+  },
+  'moda': {
+    label: 'Moda & Estilo', gradient: 'from-fuchsia-500 to-pink-700',
+    iconPath: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z" /></svg>,
+    subCategories: [
+      { id: 'fem', label: 'Moda Feminina', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>, children: [{ id: 'dresses', label: 'Vestidos' }, { id: 'blazers', label: 'Blazers & Alfaiataria' }, { id: 'skirts', label: 'Saias & Conjuntos' }] },
+      { id: 'masc', label: 'Moda Masculina', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path strokeLinecap="round" strokeLinejoin="round" d="M16 10a4 4 0 0 1-8 0" /></svg>, children: [{ id: 'shirts', label: 'Camisas Sociais' }, { id: 'pants', label: 'Calças & Bermudas' }, { id: 'suits', label: 'Ternos & Jaquetas' }] },
+      { id: 'shoes', label: 'Tênis Importados', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z" /></svg>, children: [{ id: 'nike', label: 'Nike & Jordan' }, { id: 'adidas', label: 'Adidas & Yeezy' }, { id: 'casual', label: 'Casual & Running' }] },
+      { id: 'bags', label: 'Bolsas & Malas', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="8" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8V4m0 0a2 2 0 1 0 0 4m0-4a2 2 0 1 1 0 4" /></svg>, children: [{ id: 'backpacks', label: 'Mochilas' }, { id: 'luggage', label: 'Malas de Viagem' }, { id: 'wallets', label: 'Carteiras & Acessórios' }] },
+    ],
+    brands: [
+      { name: 'Nike', logo: 'N' }, { name: 'Adidas', logo: 'A' },
+      { name: 'Zara', logo: 'Z' }, { name: 'Lacoste', logo: 'L' },
+    ],
+    productFilter: 'Moda',
   },
   'pet': {
     label: 'Pet & Nature', gradient: 'from-lime-500 to-green-600',

@@ -290,7 +290,7 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
     }
   },
   'apple': {
-    label: 'Mundo Apple', gradient: 'from-slate-700 to-black',
+    label: 'Produtos Apple', gradient: 'from-slate-700 to-black',
     iconPath: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
     subCategories: [
       { id: 'iphone', label: 'iPhone', img: 'https://images.unsplash.com/photo-1695048132625-0a6df571e74d?w=200&h=200&fit=crop&q=80', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="5" y="2" width="14" height="20" rx="2" /></svg>, children: [{ id: 'ip15', label: 'iPhone 15 Series' }, { id: 'ip14', label: 'iPhone 14 Series' }] },
@@ -472,6 +472,21 @@ export const CATEGORY_MAP: Record<string, CategoryMeta> = {
       { name: 'Electrolux', logo: 'E' }, { name: 'Xiaomi', logo: 'X' },
     ],
     productFilter: 'Casa',
+  },
+  'moda': {
+    label: 'Moda & Estilo', gradient: 'from-fuchsia-500 to-pink-700',
+    iconPath: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z" /></svg>,
+    subCategories: [
+      { id: 'fem', label: 'Moda Feminina', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>, children: [{ id: 'dresses', label: 'Vestidos' }, { id: 'blazers', label: 'Blazers & Alfaiataria' }, { id: 'skirts', label: 'Saias & Conjuntos' }] },
+      { id: 'masc', label: 'Moda Masculina', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path strokeLinecap="round" strokeLinejoin="round" d="M16 10a4 4 0 0 1-8 0" /></svg>, children: [{ id: 'shirts', label: 'Camisas Sociais' }, { id: 'pants', label: 'Calças & Bermudas' }, { id: 'suits', label: 'Ternos & Jaquetas' }] },
+      { id: 'shoes', label: 'Tênis Importados', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z" /></svg>, children: [{ id: 'nike', label: 'Nike & Jordan' }, { id: 'adidas', label: 'Adidas & Yeezy' }, { id: 'casual', label: 'Casual & Running' }] },
+      { id: 'bags', label: 'Bolsas & Malas', icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="8" width="18" height="12" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8V4m0 0a2 2 0 1 0 0 4m0-4a2 2 0 1 1 0 4" /></svg>, children: [{ id: 'backpacks', label: 'Mochilas' }, { id: 'luggage', label: 'Malas de Viagem' }, { id: 'wallets', label: 'Carteiras & Acessórios' }] },
+    ],
+    brands: [
+      { name: 'Nike', logo: 'N' }, { name: 'Adidas', logo: 'A' },
+      { name: 'Zara', logo: 'Z' }, { name: 'Lacoste', logo: 'L' },
+    ],
+    productFilter: 'Moda',
   },
   'pet': {
     label: 'Pet & Nature', gradient: 'from-lime-500 to-green-600',
