@@ -320,10 +320,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
         {/* ── DEPARTMENT MENU BAR (Amazon-style) */}
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-1.5 hidden md:flex items-center gap-1 border-t border-slate-100 relative">
           {/* "Todos" dropdown button */}
-          <div className="relative flex-shrink-0">
+          <div 
+            className="relative flex-shrink-0"
+            onMouseEnter={() => setDeptOpen(true)}
+            onMouseLeave={() => { setDeptOpen(false); setDeptHover(null); setSubHover(null); }}
+          >
             <button
               onClick={() => setDeptOpen(v => !v)}
-              onMouseEnter={() => setDeptOpen(true)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all ${deptOpen ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,12 +340,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
             {/* Dropdown */}
             {deptOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} onMouseLeave={() => setDeptOpen(false)} />
+                <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} />
                 {/* Advanced Mega Menu Dropdown */}
                 <div
                   className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex shadow-indigo-100/50 min-h-[400px]"
-                  onMouseEnter={() => setDeptOpen(true)}
-                  onMouseLeave={() => { setDeptOpen(false); setDeptHover(null); setSubHover(null); }}
                 >
                   {/* Coluna 1: Departamentos */}
                   <div className="w-72 bg-slate-50 border-r border-slate-100 py-2 flex-shrink-0">
