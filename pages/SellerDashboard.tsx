@@ -8,7 +8,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { getProfile, DbProfile, createProduct } from '../services/db';
 import { Product } from '../types';
-import { SUPPLIER_CATEGORIES } from '../data/supplierCategories';
+import SUPPLIER_CATEGORIES from '../data/supplier_categories.json';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

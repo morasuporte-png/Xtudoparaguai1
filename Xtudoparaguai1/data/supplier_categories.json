@@ -1,6 +1,6 @@
-export const SUPPLIER_CATEGORIES = {
-  "DECORAÇÃO": {
-    "DECORAÇÃO": [
+{
+  "2_DECORAÇÃO.xlsx": {
+    "CAT.1 DECORAÇÃO": [
       "DECORAÇÃO",
       "Adesivos",
       "Almofadas e Capas",
@@ -448,7 +448,7 @@ export const SUPPLIER_CATEGORIES = {
       "Porta Copos",
       "Peso de Porta"
     ],
-    "MÓVEIS": [
+    "CAT.2 MÓVEIS": [
       "MÓVEIS",
       "Área de Serviço",
       "Banheiro e Lavabo",
@@ -520,7 +520,7 @@ export const SUPPLIER_CATEGORIES = {
       "poltrona",
       "Ver mais +"
     ],
-    "CASA & CONSTRUÇÃO": [
+    "CAT.3 CASA & CONSTRUÇÃO": [
       "CASA E CONSTRUÇÃO",
       "Iluminação",
       "Ferramentas",
@@ -628,7 +628,7 @@ export const SUPPLIER_CATEGORIES = {
       "Rodateto",
       "Ver mais +"
     ],
-    "CAMA, MESA E BANHO": [
+    "CAT.4 CAMA, MESA E BANHO": [
       "CAMA, MESA E BANHO",
       "Cama",
       "Mesa",
@@ -726,7 +726,7 @@ export const SUPPLIER_CATEGORIES = {
       "KIt para Cama Babá",
       "Kit Enxoval para Berço"
     ],
-    "FERRAMENTAS": [
+    "CAT.5 FERRAMENTAS": [
       "FERRAMENTAS",
       "Acessórios",
       "manuais",
@@ -821,7 +821,7 @@ export const SUPPLIER_CATEGORIES = {
       "tornos",
       "Ver mais +"
     ],
-    "UTILIDADES DOMÉSTICAS": [
+    "CAT.6 UTILIDADES DOMÉSTICAS": [
       "UTILIDADES DOMÉSTICAS",
       "Eletrodomésticos",
       "Acessórios de Cozinha",
@@ -1406,7 +1406,7 @@ export const SUPPLIER_CATEGORIES = {
       "Varal de Macarrão e Massas",
       "Vasilha"
     ],
-    "PET SHOP": [
+    "CAT.7 PET SHOP": [
       "PET SHOP",
       "Cachorros",
       "Gatos",
@@ -1446,7 +1446,7 @@ export const SUPPLIER_CATEGORIES = {
       "Grade e Rede de Proteção",
       "Saúde e Higiene"
     ],
-    "CURSOS": [
+    "CAT.8 CURSOS": [
       "CURSOS",
       "ead",
       "presenciais",
@@ -1463,7 +1463,7 @@ export const SUPPLIER_CATEGORIES = {
       "V-Ray",
       "Ver mais +"
     ],
-    "ÁUDIO E VÍDEO": [
+    "CAT.9 ÁUDIO E VÍDEO": [
       "ÁUDIO E VÍDEO",
       "TVs",
       "Áudio",
@@ -1503,7 +1503,7 @@ export const SUPPLIER_CATEGORIES = {
       "Nanocell",
       "Ver mais +"
     ],
-    "INFORMÁTICA": [
+    "CAT.11 INFORMÁTICA": [
       "INFORMÁTICA",
       "Notebooks",
       "Computadores",
@@ -1522,7 +1522,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "PET": {
+  "3_PET.xlsx": {
     "Geral": [
       "Cães",
       "Gatos",
@@ -1795,7 +1795,7 @@ export const SUPPLIER_CATEGORIES = {
       "Cintos",
       "Ver mais +"
     ],
-    "Cereais": [
+    "Cereais ": [
       "Zona Cerealista",
       "Oleoginosas",
       "Frutas Desidratadas",
@@ -1810,14 +1810,14 @@ export const SUPPLIER_CATEGORIES = {
       "LANÇAMENTOS",
       "Ver mais +"
     ],
-    "Eco & Sustentáveis": [
+    "Eco & Sustentáveis ": [
       "Marcas",
       "X",
       "PROMOÇÕES",
       "LANÇAMENTOS",
       "Ver mais +"
     ],
-    "Linha Profissional": [
+    "Linha Profissional ": [
       "X",
       "PROMOÇÕES",
       "LANÇAMENTOS",
@@ -1845,7 +1845,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "COSMÉTICOS": {
+  "4_COSMÉTICOS.xlsx": {
     "1-TODOS OS PRODUTOS": [
       "TODOS OS PRODUTOS",
       "CABELOS",
@@ -2138,7 +2138,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ],
     "PROMOÇÃO": [],
-    "9-MARCAS": [
+    "9-MARCAS ": [
       "MARCAS",
       "A - B - C",
       "D - E - F",
@@ -2688,7 +2688,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "TEXTIL_": {
+  "5_TEXTIL_.xlsx": {
     "ACESSÓRIOS": [
       "ÓCULOS",
       "JOIAS",
@@ -2889,7 +2889,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "ALIMENTAÇÃO SAUDÁVEL": {
+  "6_ALIMENTAÇÃO SAUDÁVEL.xlsx": {
     "1-Nutrição Esportiva": [
       "Nutrição Esportiva",
       "Proteínas",
@@ -3283,7 +3283,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "KIDS E TEENS": {
+  "7_KIDS E TEENS.xlsx": {
     "ROUPAS": [
       "Roupas",
       "Meninas",
@@ -3513,8 +3513,8 @@ export const SUPPLIER_CATEGORIES = {
       "Lácteos"
     ]
   },
-  "MULTIMARCAS": {
-    "ICONE 1 - CATEGORIA HOME": [
+  "8_MULTIMARCAS.xlsx": {
+    " ICONE 1 - CATEGORIA HOME": [
       "FERRAMENTAS",
       "Ferramentas Elétricas",
       "Ferramentas Manuais",
@@ -3603,7 +3603,7 @@ export const SUPPLIER_CATEGORIES = {
       "Extensão P/ Soquete",
       "Ver mais +"
     ],
-    "ICONE 2- CATEGORIA HOME": [
+    " ICONE 2- CATEGORIA HOME": [
       "ELETRODOMÉSTICO",
       "COZINHA",
       "SALA",
@@ -3641,7 +3641,7 @@ export const SUPPLIER_CATEGORIES = {
       "moedores de carne",
       "Ver mais +"
     ],
-    "ICONE 3- CATEGORIA HOME": [
+    " ICONE 3- CATEGORIA HOME": [
       "ELETROPORTÁTEIS",
       "COZINHA",
       "UTILITÁRIOS",
@@ -3673,7 +3673,7 @@ export const SUPPLIER_CATEGORIES = {
       "torradeira",
       "Ver mais +"
     ],
-    "ICONE 4 - CATEGORIA HOME": [
+    " ICONE 4 - CATEGORIA HOME": [
       "MÓVEIS",
       "QUARTO",
       "SALA",
@@ -3694,7 +3694,7 @@ export const SUPPLIER_CATEGORIES = {
       "Almofadas",
       "Ver mais +"
     ],
-    "ICONE 5- CATEGORIA HOME": [
+    " ICONE 5- CATEGORIA HOME": [
       "SAÚDE",
       "BEM-ESTAR SEXUAL",
       "CUIDADOS PESSOAIS",
@@ -3724,7 +3724,7 @@ export const SUPPLIER_CATEGORIES = {
       "Monitores e Teste de Saúde",
       "Ver mais +"
     ],
-    "ICONE 6- CATEGORIA HOME": [
+    " ICONE 6- CATEGORIA HOME": [
       "MODA",
       "ACESSÓRIOS DE MODA",
       "CALÇADOS MASCULINOS",
@@ -3764,7 +3764,7 @@ export const SUPPLIER_CATEGORIES = {
       "Pulseiras",
       "Ver mais +"
     ],
-    "ICONE 7- CATEGORIA HOME": [
+    " ICONE 7- CATEGORIA HOME": [
       "CELULARES",
       "CELULARES E TELEFONIA",
       "Aparelho celular",
@@ -3778,7 +3778,7 @@ export const SUPPLIER_CATEGORIES = {
       "Telefone sem fio",
       "Ver mais +"
     ],
-    "ICONE 8 - CATEGORIA HOME": [
+    " ICONE 8 - CATEGORIA HOME": [
       "INFORMÁTICA",
       "COMPUTADORES E ACESSÓRIOS",
       "Computadores Desktop",
@@ -3796,7 +3796,7 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   },
-  "FORNECEDOR.SHOP": {
+  "FORNECEDOR.SHOP.xlsx": {
     "CONSTRUÇÃO": [
       "MODA",
       "LANÇAMENTOS",
@@ -3955,7 +3955,7 @@ export const SUPPLIER_CATEGORIES = {
       "VIBRADORES DE CONCRETO",
       "Ver mais +"
     ],
-    "DECORAÇÃO": [
+    "DECORAÇÃO ": [
       "DECORAÇÃO",
       "PORTA RETRATO",
       "ALMOFADAS E CAPAS",
@@ -4026,7 +4026,7 @@ export const SUPPLIER_CATEGORIES = {
       "PRODUTOS PARA APLICAÇÃO E ACABAMENTO",
       "Ver mais +"
     ],
-    "FERRAGENS": [
+    "FERRAGENS ": [
       "PREGOS E PARAFUSOS",
       "X",
       "PROMOÇÕES",
@@ -4066,7 +4066,7 @@ export const SUPPLIER_CATEGORIES = {
       "CAVALETES",
       "Ver mais +"
     ],
-    "ELETRODOMÉSTICO": [
+    "ELETRODOMÉSTICO ": [
       "X",
       "PROMOÇÕES",
       "LANÇAMENTOS",
@@ -4114,4 +4114,4 @@ export const SUPPLIER_CATEGORIES = {
       "Ver mais +"
     ]
   }
-};
+}
