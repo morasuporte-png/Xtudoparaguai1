@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole } from '../types';
 import { CATEGORY_MAP } from '../constants';
 import Logo from './Logo';
@@ -9,6 +9,7 @@ import { useRewards, TIER_COLORS } from '../context/RewardsContext';
 import AuthModal from './AuthModal';
 import DollarWidget from './DollarWidget';
 import { useAuth } from '../context/AuthContext';
+import { getCategoryTree, Department, Category as CategoryType } from '../services/categoryService';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -125,6 +126,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
   const { user, signOut } = useAuth();
   const activeCountry = COUNTRIES.find(c => c.code === country)!;
   const [authModal, setAuthModal] = useState<null | 'login' | 'register'>(null);
+  const categoryTree = useMemo(() => getCategoryTree(), []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -337,58 +339,69 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
+
             {/* Dropdown */}
             {deptOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setDeptOpen(false)} />
-                {/* Advanced Mega Menu Dropdown */}
                 <div
-                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex shadow-indigo-100/50 min-h-[400px]"
+                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex shadow-indigo-100/50 min-h-[500px]"
                 >
                   {/* Coluna 1: Departamentos */}
-                  <div className="w-72 bg-slate-50 border-r border-slate-100 py-2 flex-shrink-0">
+                  <div className="w-72 bg-slate-50 border-r border-slate-100 py-2 flex-shrink-0 overflow-y-auto max-h-[70vh]">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-5 pt-3 pb-2">Departamentos</p>
-                    {Object.entries(CATEGORY_MAP).map(([slug, meta]) => (
+                    {categoryTree.map((dept) => (
                       <div
-                        key={slug}
-                        onMouseEnter={() => { setDeptHover(slug); setSubHover(null); }}
-                        className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-bold transition-colors cursor-pointer ${deptHover === slug ? 'bg-white text-indigo-700 shadow-sm border-l-4 border-indigo-600' : 'text-slate-700 hover:bg-slate-100 border-l-4 border-transparent'
+                        key={dept.id}
+                        onMouseEnter={() => { setDeptHover(dept.id); setSubHover(null); }}
+                        className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-bold transition-colors cursor-pointer ${deptHover === dept.id ? 'bg-white text-indigo-700 shadow-sm border-l-4 border-indigo-600' : 'text-slate-700 hover:bg-slate-100 border-l-4 border-transparent'
                           }`}
-                        onClick={() => { window.location.hash = `#category/${slug}`; setDeptOpen(false); }}
+                        onClick={() => { window.location.hash = `#category/${dept.id}`; setDeptOpen(false); }}
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`${deptHover === slug ? 'text-indigo-600' : 'text-slate-400'}`}>{meta.iconPath}</span>
-                          {meta.label}
+                          <span className={`${deptHover === dept.id ? 'text-indigo-600' : 'text-slate-400'}`}>
+                            {dept.iconPath || (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            )}
+                          </span>
+                          {dept.label}
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === slug ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === dept.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
                     ))}
                   </div>
 
-                  {/* Coluna 2: Subcategorias */}
-                  {deptHover && CATEGORY_MAP[deptHover] && CATEGORY_MAP[deptHover].subCategories && CATEGORY_MAP[deptHover].subCategories.length > 0 && (
+                  {/* Coluna 2: Categorias */}
+                  {deptHover && categoryTree.find(d => d.id === deptHover) && (
                     <div className="w-72 bg-white border-r border-slate-100 py-2 flex-shrink-0">
                       <div className="px-5 pt-3 pb-3 border-b border-slate-50 flex items-center gap-2 mb-2">
-                        <span className="text-indigo-600 w-5 h-5">{CATEGORY_MAP[deptHover].iconPath}</span>
-                        <h3 className="font-extrabold text-sm text-slate-800">{CATEGORY_MAP[deptHover].label}</h3>
+                        <span className="text-indigo-600 w-5 h-5">
+                          {categoryTree.find(d => d.id === deptHover)?.iconPath || (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                          )}
+                        </span>
+                        <h3 className="font-extrabold text-sm text-slate-800">{categoryTree.find(d => d.id === deptHover)?.label}</h3>
                       </div>
-                      <div className="overflow-y-auto max-h-[60vh]">
-                        {CATEGORY_MAP[deptHover].subCategories.map(sub => (
+                      <div className="overflow-y-auto max-h-[70vh]">
+                        {categoryTree.find(d => d.id === deptHover)?.categories.map(cat => (
                           <div
-                            key={sub.id}
-                            onMouseEnter={() => setSubHover(sub.id)}
-                            className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-semibold transition-colors cursor-pointer ${subHover === sub.id ? 'bg-indigo-50/50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+                            key={cat.id}
+                            onMouseEnter={() => setSubHover(cat.id)}
+                            className={`group w-full flex items-center justify-between px-5 py-3 text-sm font-semibold transition-colors cursor-pointer ${subHover === cat.id ? 'bg-indigo-50/50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
                               }`}
-                            onClick={() => { window.location.hash = `#category/${deptHover}/${sub.id}`; setDeptOpen(false); }}
+                            onClick={() => { window.location.hash = `#category/${deptHover}/${cat.id}`; setDeptOpen(false); }}
                           >
                             <div className="flex items-center gap-3">
-                              {sub.icon && <span className="text-slate-400 w-4 h-4">{sub.icon}</span>}
-                              {sub.label}
+                              {cat.label}
                             </div>
-                            {sub.children && sub.children.length > 0 && (
-                              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${subHover === sub.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
+                            {cat.subCategories.length > 0 && (
+                              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${subHover === cat.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
@@ -398,23 +411,20 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                     </div>
                   )}
 
-                  {/* Coluna 3: Sub-subcategorias (Netos) */}
-                  {deptHover && subHover && CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.children && CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)!.children!.length > 0 && (
+                  {/* Coluna 3: Subcategorias */}
+                  {deptHover && subHover && categoryTree.find(d => d.id === deptHover)?.categories.find(c => c.id === subHover)?.subCategories && (
                     <div className="w-72 bg-white py-2 flex-shrink-0">
                       <div className="px-5 pt-3 pb-3 border-b border-slate-50 flex items-center gap-2 mb-2">
-                        {CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.icon && (
-                           <span className="text-slate-400 w-4 h-4">{CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.icon}</span>
-                        )}
-                        <h3 className="font-extrabold text-sm text-slate-800">{CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.label}</h3>
+                        <h3 className="font-extrabold text-sm text-slate-800">{categoryTree.find(d => d.id === deptHover)?.categories.find(c => c.id === subHover)?.label}</h3>
                       </div>
-                      <div className="overflow-y-auto max-h-[60vh] px-3 space-y-1">
-                        {CATEGORY_MAP[deptHover].subCategories.find(s => s.id === subHover)?.children?.map(child => (
+                      <div className="overflow-y-auto max-h-[70vh] px-3 space-y-1">
+                        {categoryTree.find(d => d.id === deptHover)?.categories.find(c => c.id === subHover)?.subCategories.map(sub => (
                           <div
-                            key={child.id}
+                            key={sub.id}
                             className="w-full flex items-center px-3 py-2 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                            onClick={() => { window.location.hash = `#category/${deptHover}/${subHover}/${child.id}`; setDeptOpen(false); }}
+                            onClick={() => { window.location.hash = `#category/${deptHover}/${subHover}/${sub.id}`; setDeptOpen(false); }}
                           >
-                            {child.label}
+                            {sub.label}
                           </div>
                         ))}
                       </div>
@@ -423,6 +433,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                 </div>
               </>
             )}
+
           </div>
 
           {/* Divider */}

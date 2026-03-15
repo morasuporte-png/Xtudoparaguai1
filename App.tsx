@@ -16,6 +16,7 @@ import TrackOrder from './pages/TrackOrder';
 import Checkout from './pages/Checkout';
 import SellerProfile from './pages/SellerProfile';
 import SearchResults from './pages/SearchResults';
+import AllCategoriesPage from './pages/AllCategoriesPage';
 import { MOCK_PRODUCTS } from './constants';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
@@ -55,7 +56,7 @@ const AppInner: React.FC = () => {
 
   // Sync role with hash
   useEffect(() => {
-    if (currentHash === '#marketplace' || currentHash === '' || currentHash.startsWith('#category/') || currentHash.startsWith('#search')) setActiveRole(UserRole.BUYER);
+    if (currentHash === '#marketplace' || currentHash === '' || currentHash.startsWith('#category/') || currentHash.startsWith('#search') || currentHash === '#all-categories') setActiveRole(UserRole.BUYER);
     if (currentHash === '#sellers' || currentHash === '#seller/products/new' || currentHash.startsWith('#seller/products/edit/')) setActiveRole(UserRole.SELLER);
     if (currentHash === '#wholesale') setActiveRole(UserRole.WHOLESALE);
   }, [currentHash]);
@@ -89,6 +90,7 @@ const AppInner: React.FC = () => {
     // ── Public routes (no login required) ─────────────────────────────────────
     if (currentHash === '#auth') return <Auth />;
     if (currentHash.startsWith('#marketplace') || currentHash === '') return <Marketplace />;
+    if (currentHash === '#all-categories') return <AllCategoriesPage />;
     if (currentHash.startsWith('#category/')) return <CategoryPage slug={currentHash.replace('#category/', '')} />;
     if (currentHash.startsWith('#moda')) {
       const subPath = currentHash.substring(5);
