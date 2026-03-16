@@ -682,9 +682,13 @@ const Marketplace: React.FC = () => {
         <div className="mb-7">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-black text-slate-900">Categorias</h2>
-            <button className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+            <button 
+              onClick={() => { window.location.hash = '#all-categories'; window.scrollTo(0, 0); }}
+              className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+            >
               Ver todas <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
             </button>
+
           </div>
           <div className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm">
             {/* Linha 1: 12 populares em grid */}

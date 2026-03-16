@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CATEGORY_MAP } from '../constants';
+
+import { getCategoryTree, Department, Category as CategoryType } from '../services/categoryService';
 import { Product } from '../types';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
@@ -131,7 +133,37 @@ const ProductCard: React.FC<{ product: Product; featured?: boolean; isDark?: boo
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const CategoryPage: React.FC<CategoryPageProps> = ({ slug }) => {
-    const config = CATEGORY_MAP[slug] || CATEGORY_MAP['celulares']; // fallback
+    const categoryTree = useMemo(() => getCategoryTree(), []);
+    
+    const config = useMemo(() => {
+        // Try exact match in CATEGORY_MAP first
+        if (CATEGORY_MAP[slug]) return CATEGORY_MAP[slug];
+
+        // Parse hierarchical slug: "dept-slug/cat-slug/sub-slug"
+        const parts = slug.split('/');
+        const deptId = parts[0];
+        const catId = parts[1];
+        const subId = parts[2];
+
+        const dept = categoryTree.find(d => d.id === deptId);
+        if (dept) {
+            // Find category and sub if present
+            const cat = catId ? dept.categories.find(c => c.id === catId) : null;
+            const sub = subId ? cat?.subCategories.find(s => s.id === subId) : null;
+
+            return {
+                label: sub?.label || cat?.label || dept.label,
+                gradient: dept.gradient || 'from-indigo-600 to-indigo-800',
+                iconPath: dept.iconPath,
+                subCategories: cat ? cat.subCategories : dept.categories.map(c => ({ id: c.id, label: c.label })),
+                brands: [],
+                productFilter: sub?.label || cat?.label || dept.label
+            };
+        }
+
+        return CATEGORY_MAP['celulares']; // fallback
+    }, [slug, categoryTree]);
+
     const { addToCart } = useCart();
 
     // Dark Mode detection for Tech Categories
