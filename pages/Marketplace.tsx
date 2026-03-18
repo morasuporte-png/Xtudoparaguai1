@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MOCK_PRODUCTS, CATEGORIES } from '../constants';
+import { getCategoryTree } from '../services/categoryService';
 import { Product } from '../types';
 import { analyzeDeal, getSmartSearchSuggestions } from '../services/geminiService';
 import { useCart } from '../context/CartContext';
@@ -677,22 +678,52 @@ const Marketplace: React.FC = () => {
         </div>
       )}
 
-      {/* ── CATEGORIES visual grid ────────────────────────────── */}
+      {/* ── DEPARTMENTS visual grid ────────────────────────── */}
       {!isFiltering && (
         <div className="mb-7">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black text-slate-900">Categorias</h2>
+            <h2 className="text-xl font-black text-slate-900">Departamentos</h2>
             <button 
               onClick={() => { window.location.hash = '#all-categories'; window.scrollTo(0, 0); }}
               className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
             >
               Ver todas <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
             </button>
-
           </div>
-          <div className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm">
-            {/* Linha 1: 12 populares em grid */}
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">⭐ Mais populares em CDE</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {getCategoryTree().map(dept => (
+              <button
+                key={dept.id}
+                onClick={() => { window.location.hash = `#category/${dept.id}`; window.scrollTo(0, 0); }}
+                className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">{dept.emoji || '📦'}</span>
+                  <h3 className="font-black text-sm text-slate-800 group-hover:text-indigo-600 transition-colors leading-tight">{dept.label}</h3>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">{dept.categories.length} categorias</p>
+                <div className={`absolute top-0 right-0 w-16 h-16 opacity-10 bg-gradient-to-br ${dept.gradient || 'from-indigo-500 to-purple-600'} rounded-bl-[40px]`} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── CATEGORIES ───────────────────────────────────────── */}
+      {!isFiltering && (
+        <div className="mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-black text-slate-900">Categorias</h2>
+            <button
+              onClick={() => { window.location.hash = '#all-categories'; window.scrollTo(0, 0); }}
+              className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+            >
+              Ver todas <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-[24px] shadow-sm p-6">
+            {/* Linha 1: 12 categorias principais */}
             <div className="grid grid-cols-6 lg:grid-cols-12 gap-y-4 gap-x-1">
               {CATEGORIES.slice(0, 12).map(cat => (
                 <button
@@ -703,7 +734,7 @@ const Marketplace: React.FC = () => {
                   <div className="relative">
                     <div className={`w-14 h-14 rounded-full overflow-hidden border-2 border-slate-100 group-hover:border-indigo-300 transition-all group-hover:scale-110 duration-200 shadow-sm mx-auto ${activeCategory === cat.name ? 'border-indigo-500 ring-2 ring-indigo-200' : ''}`}>
                       <img
-                        src={CATEGORY_IMAGES[cat.name] || `https://picsum.photos/seed/${cat.id}x/200/200`}
+                        src={CATEGORY_IMAGES[cat.name] || `https://picsum.photos/seed/${cat.id}/200/200`}
                         alt={cat.name}
                         className="w-full h-full object-cover"
                       />
