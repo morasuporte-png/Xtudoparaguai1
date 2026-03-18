@@ -6,7 +6,7 @@ import Logo from './Logo';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
 import { useRewards, TIER_COLORS } from '../context/RewardsContext';
-import AuthModal from './AuthModal';
+
 import DollarWidget from './DollarWidget';
 import { useAuth } from '../context/AuthContext';
 import { getCategoryTree, Department, Category as CategoryType } from '../services/categoryService';
@@ -125,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut } = useAuth();
   const activeCountry = COUNTRIES.find(c => c.code === country)!;
-  const [authModal, setAuthModal] = useState<null | 'login' | 'register'>(null);
+
   const categoryTree = useMemo(() => getCategoryTree(), []);
 
   useEffect(() => {
@@ -144,9 +144,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
     }
   };
 
-  const handleLoginSuccess = () => {
-    setAuthModal(null);
-  };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fc] overflow-x-hidden">
@@ -626,14 +624,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
         </div>
       </footer>
 
-      {/* ── AUTH MODAL ── */}
-      {authModal && (
-        <AuthModal
-          defaultTab={authModal}
-          onClose={() => setAuthModal(null)}
-          onSuccess={handleLoginSuccess}
-        />
-      )}
+
     </div>
   );
 };

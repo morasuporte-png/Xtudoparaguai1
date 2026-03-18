@@ -103,7 +103,7 @@ const AppInner: React.FC = () => {
     }
     if (currentHash.startsWith('#search')) return <SearchResults />;
     if (currentHash === '#wishlist') return requireAuth(<Wishlist />);
-    if (currentHash === '#investors') return <InvestorDashboard />;
+    if (currentHash === '#investors') return requireAuth(<InvestorDashboard />);
     if (currentHash === '#track-order') return <TrackOrder />;
     // Info pages
     if (currentHash === '#como-funciona') return <ComoFunciona />;
@@ -127,7 +127,7 @@ const AppInner: React.FC = () => {
       const product = MOCK_PRODUCTS.find(p => p.id === productId);
       return requireAuth(<ProductRegistration onBack={() => { window.location.hash = '#sellers'; }} initialProduct={product} />);
     }
-    if (currentHash === '#wholesale' || activeRole === UserRole.WHOLESALE) return <WholesaleDashboard />;
+    if (currentHash === '#wholesale' || activeRole === UserRole.WHOLESALE) return requireAuth(<WholesaleDashboard />);
 
     return <Marketplace />;
   };

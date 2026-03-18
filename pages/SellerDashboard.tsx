@@ -6,7 +6,7 @@ import { getProductOptimizationSuggestion } from '../services/geminiService';
 import { useChat, ChatRoom } from '../context/ChatContext';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { getProfile, DbProfile, createProduct } from '../services/db';
+import { getProfile, DbProfile, saveProduct } from '../services/db';
 import { Product } from '../types';
 import SUPPLIER_CATEGORIES from '../data/supplier_categories.json';
 
@@ -863,15 +863,26 @@ const SellerDashboard: React.FC = () => {
         }
       }
 
-      const result = await createProduct({
+      const result = await saveProduct({
         seller_id: user.id,
         title: productForm.title,
-        category_name: `${selectedL1} > ${selectedL2} > ${selectedL3}`,
+        category: selectedL1,
+        sub_category: selectedL2 || null,
+        sub_sub_category: selectedL3 || null,
         description: productForm.description,
+        brand: null,
+        condition: 'new',
+        origin: 'CDE',
         price_brl: Number(productForm.price_brl),
         compare_price_brl: Number(productForm.compare_price_brl) || Number(productForm.price_brl),
         stock: Number(productForm.stock) || 1,
+        sku: null,
+        warranty: '12 meses',
+        shipping: 'included',
+        delivery_days: 7,
         images: imageUrls,
+        specs: [],
+        is_active: true,
       });
 
       if (result) {
