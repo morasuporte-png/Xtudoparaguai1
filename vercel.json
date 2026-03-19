@@ -24,15 +24,5 @@
                 }
             ]
         }
-    ],
-    "crons": [
-        {
-            "path": "/api/worker",
-            "schedule": "* * * * *"
-        },
-        {
-            "path": "/api/monitor",
-            "schedule": "0 * * * *"
-        }
     ]
 }
