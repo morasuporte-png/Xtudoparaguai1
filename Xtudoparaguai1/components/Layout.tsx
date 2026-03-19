@@ -6,7 +6,7 @@ import Logo from './Logo';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
 import { useRewards, TIER_COLORS } from '../context/RewardsContext';
-import AuthModal from './AuthModal';
+
 import DollarWidget from './DollarWidget';
 import { useAuth } from '../context/AuthContext';
 import { getCategoryTree, Department, Category as CategoryType } from '../services/categoryService';
@@ -125,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut } = useAuth();
   const activeCountry = COUNTRIES.find(c => c.code === country)!;
-  const [authModal, setAuthModal] = useState<null | 'login' | 'register'>(null);
+
   const categoryTree = useMemo(() => getCategoryTree(), []);
 
   useEffect(() => {
@@ -144,9 +144,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
     }
   };
 
-  const handleLoginSuccess = () => {
-    setAuthModal(null);
-  };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fc] overflow-x-hidden">
@@ -359,7 +357,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                         onClick={() => { window.location.hash = `#category/${dept.id}`; setDeptOpen(false); }}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-base leading-none">{(dept as any).emoji || '📦'}</span>
+                          <span className="text-base leading-none">{dept.emoji || '📦'}</span>
                           {dept.label}
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === dept.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
@@ -441,7 +439,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                 onClick={() => { window.location.hash = `#category/${dept.id}`; }}
                 className="group flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all whitespace-nowrap"
               >
-                <span className="text-sm leading-none">{(dept as any).emoji || '📦'}</span>
+                <span className="text-sm leading-none">{dept.emoji || '📦'}</span>
                 {dept.label}
               </button>
             ))}
@@ -620,14 +618,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
         </div>
       </footer>
 
-      {/* ── AUTH MODAL ── */}
-      {authModal && (
-        <AuthModal
-          defaultTab={authModal}
-          onClose={() => setAuthModal(null)}
-          onSuccess={handleLoginSuccess}
-        />
-      )}
+
     </div>
   );
 };

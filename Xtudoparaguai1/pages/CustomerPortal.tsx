@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
-import { MOCK_PRODUCTS } from '../constants';
+import React, { useState, useEffect } from 'react';
 import { useChat } from '../context/ChatContext';
 import { useRewards, TIER_COLORS } from '../context/RewardsContext';
+import { useAuth } from '../context/AuthContext';
+import { getUserOrders, getProfile, upsertProfile, getAddresses, upsertAddress, deleteAddress, DbOrder, DbProfile, DbAddress } from '../services/db';
 
 type PortalTab = 'orders' | 'profile' | 'addresses' | 'wishlist' | 'conversations' | 'rewards';
-
-const MOCK_ORDERS = [
-    { id: '10825', date: '22 Fev 2026', total: 6890, status: 'Preparando envio', items: 1, img: MOCK_PRODUCTS[0].images[0] },
-    { id: '10740', date: '15 Fev 2026', total: 1250, status: 'Entregue', items: 2, img: MOCK_PRODUCTS[5].images[0] },
-    { id: '10612', date: '02 Fev 2026', total: 340, status: 'Entregue', items: 1, img: MOCK_PRODUCTS[10].images[0] },
-];
 
 const CustomerPortal: React.FC = () => {
     const [activeTab, setActiveTab] = useState<PortalTab>('orders');
@@ -17,68 +12,366 @@ const CustomerPortal: React.FC = () => {
     const { points, tier, history, nextTierPoints, pointsToDiscount } = useRewards();
     const rewardColors = TIER_COLORS[tier];
     const tierIcons: Record<string, string> = { Bronze: '🥉', Silver: '🥈', Gold: '🥇' };
+    const { user } = useAuth();
 
-    const RenderOrders = () => (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {MOCK_ORDERS.map(order => (
-                <div key={order.id} className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl hover:shadow-slate-100 transition-all group">
-                    <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden shadow-inner border border-slate-100 flex-shrink-0">
-                            <img src={order.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pedido #{order.id}</p>
-                            <h4 className="text-sm font-black text-slate-800 mb-1">{order.date}</h4>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                                <span className="text-xs font-bold text-indigo-600">{order.status}</span>
+    // Real data from Supabase
+    const [orders, setOrders] = useState<DbOrder[]>([]);
+    const [profile, setProfile] = useState<DbProfile | null>(null);
+    const [profileForm, setProfileForm] = useState({ full_name: '', phone: '' });
+    const [loadingOrders, setLoadingOrders] = useState(false);
+    const [savingProfile, setSavingProfile] = useState(false);
+
+    // Address state
+    const emptyAddr: DbAddress = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
+    const [addresses, setAddresses] = useState<DbAddress[]>([]);
+    const [addrForm, setAddrForm] = useState<DbAddress>(emptyAddr);
+    const [savingAddr, setSavingAddr] = useState(false);
+    const [cepLoading, setCepLoading] = useState(false);
+    const [showAddrForm, setShowAddrForm] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        setLoadingOrders(true);
+        getUserOrders(user.id).then(data => { setOrders(data); setLoadingOrders(false); });
+        getProfile(user.id).then(data => {
+            if (data) {
+                setProfile(data);
+                setProfileForm({ full_name: data.full_name ?? '', phone: data.phone ?? '' });
+            }
+        });
+        getAddresses(user.id).then(setAddresses);
+    }, [user]);
+
+    const handleSaveProfile = async () => {
+        if (!user) return;
+        setSavingProfile(true);
+        await upsertProfile({ id: user.id, full_name: profileForm.full_name, phone: profileForm.phone });
+        setSavingProfile(false);
+    };
+
+    const STATUS_COLOR: Record<string, string> = {
+        pending: 'text-amber-600',
+        paid: 'text-blue-600',
+        shipped: 'text-indigo-600',
+        delivered: 'text-emerald-600',
+        cancelled: 'text-rose-600',
+    };
+
+    const STATUS_LABEL: Record<string, string> = {
+        pending: 'Aguardando Pagamento',
+        paid: 'Pagamento Aprovado',
+        shipped: 'Em Trânsito',
+        delivered: 'Entregue',
+        cancelled: 'Cancelado',
+    };
+
+    const RenderOrders = () => {
+        if (loadingOrders) return (
+            <div className="flex items-center justify-center py-20 text-slate-400">
+                <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                Carregando seus pedidos...
+            </div>
+        );
+
+        if (orders.length === 0) return (
+            <div className="bg-white rounded-[40px] border border-slate-100 p-20 text-center">
+                <div className="text-5xl mb-4">🛍️</div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">Nenhum pedido ainda</h3>
+                <p className="text-slate-400 font-medium max-w-xs mx-auto">Suas compras aparecerão aqui quando você realizar o primeiro pedido.</p>
+                <button onClick={() => { window.location.hash = '#marketplace'; }} className="mt-6 bg-indigo-600 text-white font-black px-8 py-3 rounded-2xl text-sm hover:bg-indigo-700 transition-all">
+                    Ir às compras
+                </button>
+            </div>
+        );
+
+        return (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {orders.map(order => {
+                    const firstItem = order.order_items?.[0];
+                    const dateFormatted = new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+                    return (
+                        <div key={order.id} className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-xl hover:shadow-slate-100 transition-all group">
+                            <div className="flex items-center gap-6 w-full md:w-auto">
+                                <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden shadow-inner border border-slate-100 flex-shrink-0">
+                                    {firstItem?.image_url
+                                        ? <img src={firstItem.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        : <div className="w-full h-full flex items-center justify-center text-3xl">📦</div>
+                                    }
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pedido #{order.id.slice(0, 8).toUpperCase()}</p>
+                                    <h4 className="text-sm font-black text-slate-800 mb-1">{dateFormatted}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                                        <span className={`text-xs font-bold ${STATUS_COLOR[order.status] ?? 'text-slate-500'}`}>
+                                            {STATUS_LABEL[order.status] ?? order.status}
+                                        </span>
+                                    </div>
+                                    {order.order_items && order.order_items.length > 1 && (
+                                        <p className="text-[10px] text-slate-400 mt-0.5">{order.order_items.length} itens</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between w-full md:w-auto md:border-l md:border-slate-50 md:pl-8 gap-8">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
+                                    <p className="text-lg font-black text-slate-900 leading-none">R$ {order.total_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                </div>
+                                {order.tracking_code ? (
+                                    <button
+                                        onClick={() => { window.location.hash = `#track-order`; }}
+                                        className="bg-slate-900 text-white font-black px-6 py-3 rounded-2xl text-xs hover:bg-black transition-all shadow-lg active:scale-95">
+                                        Rastrear
+                                    </button>
+                                ) : (
+                                    <span className="text-xs text-slate-400 font-semibold">Sem rastreio</span>
+                                )}
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center justify-between w-full md:w-auto md:border-l md:border-slate-50 md:pl-8 gap-8">
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
-                            <p className="text-lg font-black text-slate-900 leading-none">R$ {order.total.toLocaleString('pt-BR')}</p>
-                        </div>
-                        <button className="bg-slate-900 text-white font-black px-6 py-3 rounded-2xl text-xs hover:bg-black transition-all shadow-lg active:scale-95">
-                            Rastrear
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+                    );
+                })}
+            </div>
+        );
+    };
 
     const RenderProfile = () => (
         <div className="bg-white rounded-[40px] border border-slate-100 p-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center gap-8 mb-12">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-indigo-100">
-                    MS
+                    {profileForm.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div>
-                    <h3 className="text-2xl font-black text-slate-900">Morada Silva</h3>
-                    <p className="text-slate-400 font-medium">morada.silva@exemplo.com</p>
-                    <button className="text-xs font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">Alterar Foto</button>
+                    <h3 className="text-2xl font-black text-slate-900">{profileForm.full_name || 'Meu Perfil'}</h3>
+                    <p className="text-slate-400 font-medium">{user?.email ?? ''}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                    <input type="text" defaultValue="Morada Silva" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input
+                        type="text"
+                        value={profileForm.full_name}
+                        onChange={e => setProfileForm(p => ({ ...p, full_name: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
                 <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-                    <input type="text" defaultValue="+55 (11) 99999-9999" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input
+                        type="text"
+                        value={profileForm.phone}
+                        onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
                 </div>
                 <div className="space-y-2 lg:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-                    <input type="email" defaultValue="morada.silva@exemplo.com" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+                    <input type="email" value={user?.email ?? ''} disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-400 focus:outline-none" />
                 </div>
             </div>
-            <button className="mt-12 bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95">
-                Salvar Alterações
+            <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="mt-12 bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60">
+                {savingProfile ? 'Salvando...' : 'Salvar Alterações'}
             </button>
+        </div>
+    );
+
+    const handleCepSearch = async (cep: string) => {
+        const cleaned = cep.replace(/\D/g, '');
+        setAddrForm(f => ({ ...f, cep }));
+        if (cleaned.length === 8) {
+            setCepLoading(true);
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    setAddrForm(f => ({
+                        ...f,
+                        street: data.logradouro ?? '',
+                        neighborhood: data.bairro ?? '',
+                        city: data.localidade ?? '',
+                        state: data.uf ?? '',
+                    }));
+                }
+            } catch { }
+            setCepLoading(false);
+        }
+    };
+
+    const handleSaveAddress = async () => {
+        if (!user) return;
+        setSavingAddr(true);
+        const ok = await upsertAddress(user.id, addrForm);
+        if (ok) {
+            const updated = await getAddresses(user.id);
+            setAddresses(updated);
+            setAddrForm(emptyAddr);
+            setShowAddrForm(false);
+        }
+        setSavingAddr(false);
+    };
+
+    const handleDeleteAddress = async (id: string) => {
+        if (!user) return;
+        await deleteAddress(id);
+        setAddresses(prev => prev.filter(a => a.id !== id));
+    };
+
+    const RenderAddresses = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Endereços</h2>
+                    <p className="text-sm text-slate-400 font-medium mt-1">Gerencie seus endereços de entrega</p>
+                </div>
+                <button
+                    onClick={() => { setShowAddrForm(v => !v); setAddrForm(emptyAddr); }}
+                    className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    {showAddrForm ? 'Cancelar' : 'Novo Endereço'}
+                </button>
+            </div>
+
+            {/* Form */}
+            {showAddrForm && (
+                <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 space-y-6">
+                    <h3 className="font-black text-slate-900">Novo Endereço</h3>
+
+                    {/* CEP */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CEP *</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="00000-000"
+                                    maxLength={9}
+                                    value={addrForm.cep}
+                                    onChange={e => handleCepSearch(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                />
+                                {cepLoading && (
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rua / Logradouro *</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: Rua das Flores"
+                                value={addrForm.street}
+                                onChange={e => setAddrForm(f => ({ ...f, street: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número *</label>
+                            <input
+                                type="text"
+                                placeholder="123"
+                                value={addrForm.number}
+                                onChange={e => setAddrForm(f => ({ ...f, number: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Complemento</label>
+                            <input
+                                type="text"
+                                placeholder="Apto 42, Bloco B"
+                                value={addrForm.complement ?? ''}
+                                onChange={e => setAddrForm(f => ({ ...f, complement: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                            <input
+                                type="text"
+                                placeholder="Centro"
+                                value={addrForm.neighborhood ?? ''}
+                                onChange={e => setAddrForm(f => ({ ...f, neighborhood: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade *</label>
+                            <input
+                                type="text"
+                                placeholder="São Paulo"
+                                value={addrForm.city}
+                                onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado *</label>
+                            <select
+                                value={addrForm.state}
+                                onChange={e => setAddrForm(f => ({ ...f, state: e.target.value }))}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            >
+                                <option value="">Selecione</option>
+                                {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
+                                    <option key={uf} value={uf}>{uf}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleSaveAddress}
+                        disabled={savingAddr || !addrForm.cep || !addrForm.street || !addrForm.number || !addrForm.city || !addrForm.state}
+                        className="bg-indigo-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {savingAddr ? 'Salvando...' : '💾 Salvar Endereço'}
+                    </button>
+                </div>
+            )}
+
+            {/* Saved addresses list */}
+            {addresses.length === 0 && !showAddrForm ? (
+                <div className="bg-white rounded-[40px] border border-slate-100 p-16 text-center">
+                    <p className="text-4xl mb-4">📍</p>
+                    <h3 className="text-xl font-black text-slate-900 mb-2">Nenhum endereço salvo</h3>
+                    <p className="text-slate-400 font-medium text-sm">Adicione um endereço para facilitar suas compras.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {addresses.map(addr => (
+                        <div key={addr.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
+                                <div>
+                                    <p className="font-black text-slate-900 text-sm">
+                                        {addr.street}, {addr.number}{addr.complement ? `, ${addr.complement}` : ''}
+                                    </p>
+                                    {addr.neighborhood && <p className="text-xs text-slate-500 font-medium mt-0.5">{addr.neighborhood}</p>}
+                                    <p className="text-xs text-slate-500 font-medium">{addr.city} — {addr.state} · CEP {addr.cep}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => addr.id && handleDeleteAddress(addr.id)}
+                                className="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all flex-shrink-0"
+                                title="Remover endereço"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 
@@ -197,41 +490,95 @@ const CustomerPortal: React.FC = () => {
         </div>
     );
 
+    const navItems: { id: PortalTab; icon: string; label: string }[] = [
+        { id: 'orders', icon: '📦', label: 'Pedidos' },
+        { id: 'rewards', icon: '🏆', label: 'Rewards' },
+        { id: 'profile', icon: '👤', label: 'Perfil' },
+        { id: 'addresses', icon: '📍', label: 'Endereços' },
+        { id: 'wishlist', icon: '❤️', label: 'Favoritos' },
+        { id: 'conversations', icon: '💬', label: 'Conversas' },
+    ];
+
     return (
-        <div className="min-h-screen bg-[#fafafa] py-12">
-            <div className="max-w-5xl mx-auto px-4 lg:px-6">
+        <div className="min-h-screen bg-slate-50/60">
+            <div className="max-w-6xl mx-auto px-4 py-10">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-12">
-                    <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Minha <span className="text-indigo-600">Conta</span></h1>
-                        <p className="text-slate-500 font-medium">Gerencie seus pedidos, dados e favoritos em um só lugar.</p>
+                {/* Profile Hero Card */}
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[28px] p-6 mb-8 flex items-center gap-5 shadow-xl shadow-indigo-200/50 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-white/5 pointer-events-none" />
+                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-black text-white shadow-lg flex-shrink-0 border border-white/20">
+                        {(profile?.full_name || user?.email || 'U')[0].toUpperCase()}
                     </div>
-
-                    <div className="bg-white border-2 border-slate-100 rounded-3xl p-1 shadow-sm flex items-center overflow-x-auto max-w-full">
-                        {(['orders', 'rewards', 'profile', 'addresses', 'wishlist', 'conversations'] as PortalTab[]).map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-tighter whitespace-nowrap ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                {tab === 'orders' ? 'Pedidos' : tab === 'rewards' ? '🏆 Rewards' : tab === 'profile' ? 'Perfil' : tab === 'addresses' ? 'Endereços' : tab === 'wishlist' ? 'Favoritos' : 'Conversas'}
-                            </button>
-                        ))}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-white font-black text-lg leading-tight truncate">
+                            {profile?.full_name || 'Minha Conta'}
+                        </p>
+                        <p className="text-white/60 text-sm font-medium truncate">{user?.email}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <span className="inline-flex items-center gap-1 bg-white/15 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+                                {tierIcons[tier]} {tier}
+                            </span>
+                            <span className="text-white/50 text-xs">·</span>
+                            <span className="text-white/70 text-xs font-bold">{points} pts</span>
+                        </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right hidden sm:block">
+                        <p className="text-white/50 text-[10px] uppercase tracking-widest font-black">Saldo</p>
+                        <p className="text-white font-black text-2xl">R$ {pointsToDiscount(points).toFixed(2)}</p>
+                        <p className="text-white/50 text-[10px]">em créditos</p>
                     </div>
                 </div>
 
-                <main>
-                    {activeTab === 'orders' && <RenderOrders />}
-                    {activeTab === 'rewards' && <RenderRewards />}
-                    {activeTab === 'profile' && <RenderProfile />}
-                    {activeTab === 'addresses' && <RenderProfile />}
-                    {activeTab === 'wishlist' && <RenderOrders />}
-                    {activeTab === 'conversations' && <RenderConversations />}
-                </main>
+                <div className="flex flex-col lg:flex-row gap-6">
+
+                    {/* Sidebar Navigation */}
+                    <aside className="lg:w-56 flex-shrink-0">
+                        {/* Mobile: icon grid */}
+                        <div className="lg:hidden grid grid-cols-6 gap-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-3 mb-6 overflow-hidden">
+                            {navItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <span className="text-lg">{item.icon}</span>
+                                    <span className="text-[8px] font-black uppercase tracking-tight leading-none">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Desktop: vertical sidebar */}
+                        <nav className="hidden lg:flex flex-col gap-1 bg-white rounded-[24px] border border-slate-100 shadow-sm p-3 sticky top-6">
+                            {navItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-black transition-all text-left ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                                >
+                                    <span className="text-base">{item.icon}</span>
+                                    <span className="uppercase tracking-tight text-[11px]">{item.label}</span>
+                                    {activeTab === item.id && (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 ml-auto opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main className="flex-1 min-w-0">
+                        {activeTab === 'orders' && <RenderOrders />}
+                        {activeTab === 'rewards' && <RenderRewards />}
+                        {activeTab === 'profile' && <RenderProfile />}
+                        {activeTab === 'addresses' && <RenderAddresses />}
+                        {activeTab === 'wishlist' && <RenderOrders />}
+                        {activeTab === 'conversations' && <RenderConversations />}
+                    </main>
+                </div>
             </div>
         </div>
     );
 };
 
 export default CustomerPortal;
+

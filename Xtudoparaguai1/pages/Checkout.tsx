@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useRewards } from '../context/RewardsContext';
+import { useAuth } from '../context/AuthContext';
+import { createOrder } from '../services/db';
 import { COUPONS } from '../constants';
 
 type Step = 1 | 2 | 3;
@@ -29,11 +31,19 @@ const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: string; discoun
 ];
 
 
-const PixQRCode: React.FC = () => {
-    const [scanned, setScanned] = useState(false);
+const PixQRCode: React.FC<{ qrCodeBase64?: string; pixKey?: string; amount?: number }> = ({ qrCodeBase64, pixKey, amount }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (pixKey) {
+            navigator.clipboard?.writeText(pixKey).catch(() => { });
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
 
     return (
-        <div className="flex flex-col items-center gap-3 p-6 bg-white border border-emerald-100 rounded-[24px] shadow-sm relative overflow-hidden group">
+        <div className="flex flex-col items-center gap-3 p-6 bg-white border border-emerald-100 rounded-[24px] shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20">
                 <div className="h-full bg-emerald-500 animate-pulse" style={{ width: '60%' }} />
             </div>
@@ -43,57 +53,37 @@ const PixQRCode: React.FC = () => {
                 Aguardando Pagamento
             </p>
 
-            <div className="relative">
-                <div className="w-44 h-44 bg-white border-2 border-slate-100 rounded-2xl overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 duration-500">
-                    <svg width="140" height="140" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-90">
-                        <rect width="120" height="120" fill="white" />
-                        <rect x="5" y="5" width="35" height="35" rx="4" fill="#1e1b4b" />
-                        <rect x="10" y="10" width="25" height="25" rx="2" fill="white" />
-                        <rect x="14" y="14" width="17" height="17" rx="1" fill="#1e1b4b" />
-                        <rect x="80" y="5" width="35" height="35" rx="4" fill="#1e1b4b" />
-                        <rect x="85" y="10" width="25" height="25" rx="2" fill="white" />
-                        <rect x="89" y="14" width="17" height="17" rx="1" fill="#1e1b4b" />
-                        <rect x="5" y="80" width="35" height="35" rx="4" fill="#1e1b4b" />
-                        <rect x="10" y="85" width="25" height="25" rx="2" fill="white" />
-                        <rect x="14" y="89" width="17" height="17" rx="1" fill="#1e1b4b" />
-                        {[45, 50, 55, 60, 65, 70, 75].map(x =>
-                            [45, 50, 55, 60, 65, 70, 75].map(y =>
-                                Math.random() > 0.4 ? <rect key={`${x}-${y}`} x={x} y={y} width="4.5" height="4.5" rx="1" fill="#1e1b4b" /> : null
-                            )
-                        )}
-                        {[45, 55, 65, 75].map(x => [10, 20, 30].map(y => <rect key={`t-${x}-${y}`} x={x} y={y} width="4.5" height="4.5" rx="1" fill="#1e1b4b" />))}
-                        {[10, 20, 30].map(x => [45, 55, 65, 75].map(y => <rect key={`l-${x}-${y}`} x={x} y={y} width="4.5" height="4.5" rx="1" fill="#1e1b4b" />))}
-                    </svg>
-                </div>
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-lg shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                </div>
+            <div className="w-44 h-44 bg-white border-2 border-slate-100 rounded-2xl overflow-hidden flex items-center justify-center">
+                {qrCodeBase64 ? (
+                    <img src={`data:image/png;base64,${qrCodeBase64}`} alt="QR Code PIX" className="w-full h-full object-contain" />
+                ) : (
+                    <div className="text-slate-300 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+                        <p className="text-xs font-bold">Gerando QR...</p>
+                    </div>
+                )}
             </div>
 
-            <div className="w-full space-y-2">
-                <p className="text-[10px] text-slate-400 font-bold text-center uppercase tracking-tighter">Copia e Cola</p>
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 transition-all hover:border-indigo-200">
-                    <code className="text-[10px] font-black text-slate-600 truncate flex-1">00020126580014br.gov.bcb.pix0136pagamentos@xtudo.com.br5204000053039865802BR5913XTUDO_MARKET6009PARAGUAI62070503***6304E2B1</code>
-                    <button
-                        className="p-1.5 bg-white shadow-sm border border-slate-200 rounded-lg text-indigo-600 hover:text-white hover:bg-indigo-600 transition-all flex-shrink-0"
-                        onClick={() => {
-                            navigator.clipboard?.writeText('00020126580014br.gov.bcb.pix0136pagamentos@xtudo.com.br5204000053039865802BR5913XTUDO_MARKET6009PARAGUAI62070503***6304E2B1').catch(() => { });
-                        }}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                    </button>
+            {(amount ?? 0) > 0 && <p className="text-xl font-black text-slate-900">R$ {amount!.toFixed(2).replace('.', ',')}</p>}
+
+            {pixKey && (
+                <div className="w-full space-y-2">
+                    <p className="text-[10px] text-slate-400 font-bold text-center uppercase tracking-tighter">Copia e Cola</p>
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5">
+                        <code className="text-[10px] font-black text-slate-600 truncate flex-1">{pixKey}</code>
+                        <button onClick={handleCopy} className="p-1.5 bg-white shadow-sm border border-slate-200 rounded-lg text-indigo-600 hover:text-white hover:bg-indigo-600 transition-all flex-shrink-0">
+                            {copied
+                                ? <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                : <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            }
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-                Pagamento processado pelo Banco Central
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                Pagamento processado pelo Mercado Pago
             </div>
         </div>
     );
@@ -103,6 +93,7 @@ const Checkout: React.FC = () => {
     const { items, totalPrice, clearCart, updateQuantity, removeItem, coupon, applyCoupon, couponDiscount } = useCart();
     const { showToast } = useToast();
     const { points: rewardPoints, addPoints, redeemPoints, pointsToDiscount } = useRewards();
+    const { user } = useAuth();
 
     const [step, setStep] = useState<Step>(1);
     const [form, setForm] = useState<DeliveryForm>(EMPTY_FORM);
@@ -110,6 +101,19 @@ const Checkout: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
     const [isFetchingCep, setIsFetchingCep] = useState(false);
+
+    // PIX / Boleto state after calling /api/checkout
+    const [pixData, setPixData] = useState<{ qrCodeBase64?: string; pixKey?: string; paymentId?: string } | null>(null);
+    const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
+    const [paymentError, setPaymentError] = useState('');
+    // Total congelado no momento em que o pagamento foi criado
+    const [confirmedTotal, setConfirmedTotal] = useState(0);
+
+    // Shipping
+    interface ShippingOption { id: number; name: string; company: string; price: number; delivery_time: number; }
+    const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+    const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+    const [loadingShipping, setLoadingShipping] = useState(false);
 
     // Coupon Input (Local for the field)
     const [couponInput, setCouponInput] = useState(coupon || '');
@@ -123,7 +127,8 @@ const Checkout: React.FC = () => {
 
     const pixDiscount = payment === 'pix' ? totalPrice * 0.05 : 0;
     // couponDiscount is now from useCart()
-    const displayTotal = Math.max(0, totalPrice - pixDiscount - couponDiscount - redeemDiscount);
+    const shippingCost = selectedShipping?.price ?? 0;
+    const displayTotal = Math.max(0, totalPrice - pixDiscount - couponDiscount - redeemDiscount) + shippingCost;
     const savings = items.reduce((s, i) => s + (i.product.comparePriceBRL - i.product.priceBRL) * i.quantity, 0);
     const pointsToEarn = Math.floor(displayTotal * 0.1);
 
@@ -152,6 +157,19 @@ const Checkout: React.FC = () => {
                     state: data.uf || prev.state,
                 }));
                 showToast('Endereço preenchido!', 'success', '📍');
+                // Calcular frete automaticamente
+                setLoadingShipping(true);
+                setSelectedShipping(null);
+                try {
+                    const shippingRes = await fetch('/api/shipping', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cep_destino: rawCep }),
+                    });
+                    const shippingData = await shippingRes.json();
+                    setShippingOptions(shippingData.options ?? []);
+                } catch { setShippingOptions([]); }
+                finally { setLoadingShipping(false); }
             }
         } catch { showToast('Erro ao buscar CEP.', 'error', '❌'); }
         finally { setIsFetchingCep(false); }
@@ -182,14 +200,88 @@ const Checkout: React.FC = () => {
 
     const handlePlaceOrder = async () => {
         setIsProcessing(true);
-        await new Promise(r => setTimeout(r, 2000));
-        // Apply rewards redeem
-        if (redeemQty > 0) redeemPoints(redeemQty);
-        // Add points earned
-        addPoints(displayTotal, `Compra #XT-${Math.floor(10000 + Math.random() * 90000)}`);
-        clearCart();
-        setIsProcessing(false);
-        setOrderPlaced(true);
+        setPaymentError('');
+
+        try {
+            // 1. Criar pedido no Supabase (best-effort — falha NÃO bloqueia o pagamento)
+            const isUUID = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+            const orderItems = items.map(i => ({
+                product_id: isUUID(String(i.product.id)) ? i.product.id : null,
+                title: i.product.title,
+                image_url: i.product.images[0] ?? '',
+                quantity: i.quantity,
+                unit_price: i.product.priceBRL,
+            }));
+
+            let orderId: string | null = null;
+            try {
+                orderId = user ? await createOrder({
+                    buyer_id: user.id,
+                    total_brl: displayTotal,
+                    payment_method: payment,
+                    items: orderItems,
+                    address: { cep: form.cep, street: form.address, number: form.number, complement: form.complement, city: form.city, state: form.state },
+                }) : null;
+            } catch (orderErr: any) {
+                // Ordem não crítica para o pagamento — apenas loga e continua
+                console.warn('[handlePlaceOrder] createOrder falhou, continuando...', orderErr?.message);
+            }
+
+            // 2. Chamar /api/checkout no Mercado Pago
+            setConfirmedTotal(displayTotal);  // congela o total antes do fetch
+            const res = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    payment_method: payment,
+                    total: displayTotal,
+                    items: items.map(i => ({ title: i.product.title, unit_price: i.product.priceBRL, quantity: i.quantity, picture_url: i.product.images[0] })),
+                    payer: {
+                        name: form.name,
+                        email: user?.email ?? 'cliente@xtudo.com',
+                        identification: { type: 'CPF', number: form.cpf.replace(/\D/g, '') },
+                    },
+                    external_reference: orderId ? `${orderId}::${user?.id}` : undefined,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                const detail = data.detail ? ` (${data.detail})` : '';
+                throw new Error((data.error ?? 'Erro no servidor') + detail);
+            }
+
+            // 3. Tratar resposta por método de pagamento
+            if (payment === 'pix') {
+                setPixData({ qrCodeBase64: data.qr_code_base64, pixKey: data.qr_code, paymentId: data.payment_id });
+                // Apply rewards after creating payment
+                if (redeemQty > 0) redeemPoints(redeemQty);
+                addPoints(displayTotal, `Pedido #XT-${orderId?.slice(0, 6).toUpperCase() ?? '000000'}`);
+                clearCart();
+                setStep(3); // Move to confirmation step showing QR
+            } else if (payment === 'boleto') {
+                setBoletoUrl(data.ticket_url);
+                if (redeemQty > 0) redeemPoints(redeemQty);
+                addPoints(displayTotal, `Pedido #XT-${orderId?.slice(0, 6).toUpperCase() ?? '000000'}`);
+                clearCart();
+                setOrderPlaced(true);
+                if (data.ticket_url) window.open(data.ticket_url, '_blank');
+            } else {
+                // Cartão — redirecionar para Checkout Pro
+                if (data.init_point) {
+                    if (redeemQty > 0) redeemPoints(redeemQty);
+                    addPoints(displayTotal, `Pedido #XT-${orderId?.slice(0, 6).toUpperCase() ?? '000000'}`);
+                    clearCart();
+                    window.location.href = data.init_point;
+                } else throw new Error('Link de pagamento não gerado');
+            }
+        } catch (err: any) {
+            console.error('[handlePlaceOrder]', err);
+            setPaymentError(err?.message ?? 'Erro ao processar pagamento. Tente novamente.');
+            showToast('Erro ao processar pagamento.', 'error', '❌');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     if (orderPlaced) {
@@ -359,6 +451,42 @@ const Checkout: React.FC = () => {
                                         <input name="city" value={form.city} onChange={handleFormChange} placeholder="São Paulo" className="w-full px-5 py-4 rounded-2xl border border-slate-200 text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder-slate-300 bg-slate-50" />
                                     </div>
                                 </div>
+
+                                {/* Shipping options (appear after CEP lookup) */}
+                                {loadingShipping && (
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl text-slate-400">
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" /></svg>
+                                        Calculando frete...
+                                    </div>
+                                )}
+
+                                {!loadingShipping && shippingOptions.length > 0 && (
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">🚚 Opções de Frete</label>
+                                        {shippingOptions.map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => setSelectedShipping(opt)}
+                                                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 text-left transition-all ${selectedShipping?.id === opt.id
+                                                    ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                                                    : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                                                    }`}
+                                            >
+                                                <div>
+                                                    <p className="font-black text-slate-900 text-sm">{opt.company} — {opt.name}</p>
+                                                    <p className="text-xs text-slate-400 font-medium mt-0.5">{opt.delivery_time} dias úteis</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-black text-indigo-700">R$ {opt.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedShipping?.id === opt.id ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'
+                                                        }`}>
+                                                        {selectedShipping?.id === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="p-8 pt-0">
                                 <button
@@ -415,7 +543,11 @@ const Checkout: React.FC = () => {
                                                 <p className="text-emerald-600 text-xs font-medium">Você economiza R$ {(totalPrice * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a mais</p>
                                             </div>
                                         </div>
-                                        <PixQRCode />
+                                        <PixQRCode
+                                            qrCodeBase64={pixData?.qrCodeBase64}
+                                            pixKey={pixData?.pixKey}
+                                            amount={confirmedTotal || displayTotal}
+                                        />
                                     </div>
                                 )}
 
@@ -438,12 +570,17 @@ const Checkout: React.FC = () => {
                                     {isProcessing ? (
                                         <span className="flex items-center justify-center gap-3">
                                             <span className="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                                            Processando...
+                                            Processando pagamento...
                                         </span>
                                     ) : (
-                                        `✓ Confirmar Pedido — R$ ${displayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                        `✓ Confirmar Pedido — R$ ${(confirmedTotal > 0 ? confirmedTotal : displayTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                                     )}
                                 </button>
+                                {paymentError && (
+                                    <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-sm font-bold text-center">
+                                        ❌ {paymentError}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

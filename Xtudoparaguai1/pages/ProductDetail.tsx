@@ -2,9 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MOCK_PRODUCTS } from '../constants';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
+import { useWishlist } from '../context/WishlistContext';
 import { Product } from '../types';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { supabase } from '../services/supabaseClient';
+import ReviewSection from '../components/ReviewSection';
 
 interface ProductDetailProps {
     productId: string;
@@ -13,6 +15,7 @@ interface ProductDetailProps {
 const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
     const { addItem } = useCart();
     const { openChat } = useChat();
+    const { isWishlisted, toggleWishlist } = useWishlist();
     const [product, setProduct] = useState<Product>(MOCK_PRODUCTS[0]);
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,17 +34,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                     const transformed: Product = {
                         id: data.id,
                         sellerId: data.seller_id,
-                        sellerName: data.seller_name,
-                        category: data.category_name,
+                        sellerName: data.seller_name ?? '',
+                        category: data.category,          // coluna correta
                         title: data.title,
-                        description: data.description,
+                        description: data.description ?? '',
                         priceBRL: Number(data.price_brl),
-                        comparePriceBRL: Number(data.compare_price_brl),
-                        stock: data.stock,
-                        rating: Number(data.rating),
-                        images: data.images,
-                        specs: data.specs,
-                        isVerified: data.is_verified
+                        comparePriceBRL: Number(data.compare_price_brl || data.price_brl),
+                        stock: data.stock ?? 0,
+                        rating: Number(data.rating ?? 0),
+                        images: data.images ?? [],
+                        specs: data.specs ?? [],
+                        isVerified: data.is_verified ?? false
                     };
                     setProduct(transformed);
 
@@ -49,7 +52,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                     const { data: relatedData } = await supabase
                         .from('products')
                         .select('*')
-                        .eq('category_name', transformed.category)
+                        .eq('category', transformed.category)  // coluna correta
                         .neq('id', transformed.id)
                         .limit(4);
 
@@ -57,17 +60,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                         setRelatedProducts(relatedData.map((p: any) => ({
                             id: p.id,
                             sellerId: p.seller_id,
-                            sellerName: p.seller_name,
-                            category: p.category_name,
+                            sellerName: p.seller_name ?? '',
+                            category: p.category,               // coluna correta
                             title: p.title,
-                            description: p.description,
+                            description: p.description ?? '',
                             priceBRL: Number(p.price_brl),
-                            comparePriceBRL: Number(p.compare_price_brl),
-                            stock: p.stock,
-                            rating: Number(p.rating),
-                            images: p.images,
-                            specs: p.specs,
-                            isVerified: p.is_verified
+                            comparePriceBRL: Number(p.compare_price_brl || p.price_brl),
+                            stock: p.stock ?? 0,
+                            rating: Number(p.rating ?? 0),
+                            images: p.images ?? [],
+                            specs: p.specs ?? [],
+                            isVerified: p.is_verified ?? false
                         })));
                     }
                 }
@@ -216,6 +219,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                                         Comprar Agora
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => toggleWishlist({ id: product.id, title: product.title, price_brl: product.priceBRL, images: product.images, seller_name: product.sellerName })}
+                                        className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90 ${isWishlisted(product.id) ? 'border-rose-300 bg-rose-50 text-rose-500' : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-rose-200 hover:text-rose-400'}`}
+                                        title={isWishlisted(product.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill={isWishlisted(product.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                                         </svg>
                                     </button>
                                 </div>
@@ -367,6 +379,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                         </div>
                     </div>
                 </div>
+                {/* Reviews */}
+                <ReviewSection productId={product.id} />
             </div>
         </div>
     );

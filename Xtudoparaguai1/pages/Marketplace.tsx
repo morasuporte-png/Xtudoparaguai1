@@ -650,7 +650,35 @@ const Marketplace: React.FC = () => {
                 <span className="text-slate-300 font-black text-lg mb-4">:</span>
                 <TimeBlock value={s} label="Seg" />
               </div>
-            </di      {/* ── DEPARTAMENTOS visual grid ───────────────────────── */}
+            </div>
+            <button className="text-xs font-black text-rose-500 hover:text-rose-700 transition-colors flex items-center gap-1">
+              Ver Todos <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100">
+            {flashProducts.map(p => {
+              const pct = Math.round(((p.comparePriceBRL - p.priceBRL) / p.comparePriceBRL) * 100);
+              return (
+                <button key={p.id} onClick={() => { window.location.hash = `#product/${p.id}`; window.scrollTo(0, 0); }} className="group p-5 text-left hover:bg-slate-50/80 transition-colors">
+                  <div className="relative mb-3">
+                    <img src={p.images[0]} alt={p.title} className="w-full aspect-square object-cover rounded-2xl group-hover:scale-[1.04] transition-transform duration-300 shadow-sm" />
+                    <span className="absolute top-1.5 left-1.5 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow">-{pct}%</span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 line-clamp-2 mb-1.5 leading-tight">{p.title}</p>
+                  <p className="text-base font-black text-slate-900">R$ {p.priceBRL.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 line-through">R$ {p.comparePriceBRL.toLocaleString()}</p>
+                  <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-rose-400 h-full rounded-full" style={{ width: `${Math.min(80, 20 + pct)}%` }} />
+                  </div>
+                  <p className="text-[9px] text-rose-500 font-bold mt-1">🔥 Esgotando rápido</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── DEPARTMENTS visual grid ────────────────────────── */}
       {!isFiltering && (
         <div className="mb-7">
           <div className="flex items-center justify-between mb-4">
@@ -670,7 +698,7 @@ const Marketplace: React.FC = () => {
                 className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{(dept as any).emoji || '📦'}</span>
+                  <span className="text-2xl">{dept.emoji || '📦'}</span>
                   <h3 className="font-black text-sm text-slate-800 group-hover:text-indigo-600 transition-colors leading-tight">{dept.label}</h3>
                 </div>
                 <p className="text-[11px] text-slate-400 font-medium">{dept.categories.length} categorias</p>
@@ -679,7 +707,39 @@ const Marketplace: React.FC = () => {
             ))}
           </div>
         </div>
-      )}'scale-125' : ''}`}>{cat.icon}</div>
+      )}
+
+      {/* ── CATEGORIES ───────────────────────────────────────── */}
+      {!isFiltering && (
+        <div className="mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-black text-slate-900">Categorias</h2>
+            <button
+              onClick={() => { window.location.hash = '#all-categories'; window.scrollTo(0, 0); }}
+              className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+            >
+              Ver todas <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-[24px] shadow-sm p-6">
+            {/* Linha 1: 12 categorias principais */}
+            <div className="grid grid-cols-6 lg:grid-cols-12 gap-y-4 gap-x-1">
+              {CATEGORIES.slice(0, 12).map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className="flex flex-col items-center gap-1.5 group"
+                >
+                  <div className="relative">
+                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 border-slate-100 group-hover:border-indigo-300 transition-all group-hover:scale-110 duration-200 shadow-sm mx-auto ${activeCategory === cat.name ? 'border-indigo-500 ring-2 ring-indigo-200' : ''}`}>
+                      <img
+                        src={CATEGORY_IMAGES[cat.name] || `https://picsum.photos/seed/${cat.id}/200/200`}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className={`absolute -bottom-1 -right-0 text-xs leading-none ${activeCategory === cat.name ? 'scale-125' : ''}`}>{cat.icon}</div>
                   </div>
                   <span className={`text-[10px] font-bold text-center leading-tight w-full px-1 ${activeCategory === cat.name ? 'text-indigo-600' : 'text-slate-600 group-hover:text-indigo-500'} transition-colors`}>
                     {cat.name.split(' ')[0]}
