@@ -359,13 +359,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                         onClick={() => { window.location.hash = `#category/${dept.id}`; setDeptOpen(false); }}
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`${deptHover === dept.id ? 'text-indigo-600' : 'text-slate-400'}`}>
-                            {dept.iconPath || (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
-                            )}
-                          </span>
+                          <span className="text-base leading-none">{(dept as any).emoji || '📦'}</span>
                           {dept.label}
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${deptHover === dept.id ? 'opacity-100 text-indigo-400' : 'opacity-0'} transition-opacity`} viewBox="0 0 20 20" fill="currentColor">
@@ -439,16 +433,16 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
           {/* Divider */}
           <div className="w-px h-5 bg-slate-200 mx-1 flex-shrink-0" />
 
-          {/* Quick dept links */}
+          {/* Quick dept links — dynamic from supplier data */}
           <div className="flex items-center gap-0.5 flex-1 overflow-hidden">
-            {QUICK_DEPTS.map(d => (
+            {categoryTree.map(dept => (
               <button
-                key={d.label}
-                onClick={() => { window.location.hash = d.hash; }}
+                key={dept.id}
+                onClick={() => { window.location.hash = `#category/${dept.id}`; }}
                 className="group flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all whitespace-nowrap"
               >
-                <span className="text-slate-400 group-hover:text-indigo-600 transition-colors">{d.icon}</span>
-                {d.label}
+                <span className="text-sm leading-none">{(dept as any).emoji || '📦'}</span>
+                {dept.label}
               </button>
             ))}
           </div>

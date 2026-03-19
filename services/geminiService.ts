@@ -1,9 +1,12 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+const hasValidKey = apiKey && apiKey.length > 10 && !apiKey.includes('PLACEHOLDER');
+const ai = hasValidKey ? new GoogleGenAI({ apiKey: apiKey! }) : null;
 
 export const analyzeDeal = async (productTitle: string, price: number, retailPrice: number) => {
+  if (!ai) return null;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -36,6 +39,7 @@ export const analyzeDeal = async (productTitle: string, price: number, retailPri
 };
 
 export const getSmartSearchSuggestions = async (query: string) => {
+  if (!ai) return [];
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -55,6 +59,7 @@ export const getSmartSearchSuggestions = async (query: string) => {
 }
 
 export const getProductOptimizationSuggestion = async (productTitle: string, currentPrice: number, stock: number) => {
+  if (!ai) return null;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
