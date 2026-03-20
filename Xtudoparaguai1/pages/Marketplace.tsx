@@ -681,30 +681,54 @@ const Marketplace: React.FC = () => {
       {/* ── DEPARTMENTS visual grid ────────────────────────── */}
       {!isFiltering && (
         <div className="mb-7">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black text-slate-900">Departamentos</h2>
-            <button 
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Departamentos</h2>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Produtos diretos de Ciudad del Este</p>
+            </div>
+            <button
               onClick={() => { window.location.hash = '#all-categories'; window.scrollTo(0, 0); }}
-              className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+              className="flex items-center gap-1.5 text-xs font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full transition-all"
             >
-              Ver todas <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+              Ver todas
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {getCategoryTree().map(dept => (
-              <button
-                key={dept.id}
-                onClick={() => { window.location.hash = `#category/${dept.id}`; window.scrollTo(0, 0); }}
-                className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{dept.emoji || '📦'}</span>
-                  <h3 className="font-black text-sm text-slate-800 group-hover:text-indigo-600 transition-colors leading-tight">{dept.label}</h3>
-                </div>
-                <p className="text-[11px] text-slate-400 font-medium">{dept.categories.length} categorias</p>
-                <div className={`absolute top-0 right-0 w-16 h-16 opacity-10 bg-gradient-to-br ${dept.gradient || 'from-indigo-500 to-purple-600'} rounded-bl-[40px]`} />
-              </button>
-            ))}
+            {getCategoryTree().map((dept, i) => {
+              const subCount = dept.categories.reduce((acc, c) => acc + c.subCategories.length, 0);
+              return (
+                <motion.button
+                  key={dept.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.3 }}
+                  onClick={() => { window.location.hash = `#category/${dept.id}`; window.scrollTo(0, 0); }}
+                  className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${dept.gradient || 'from-indigo-500 to-purple-700'} p-5 text-left shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[120px] flex flex-col justify-between`}
+                >
+                  {/* Shimmer overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                  {/* Top: emoji + dots */}
+                  <div className="flex items-start justify-between">
+                    <span className="text-3xl drop-shadow-sm">{dept.emoji || '📦'}</span>
+                    <span className="text-white/50 group-hover:text-white/80 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
+                  {/* Bottom: name + count */}
+                  <div>
+                    <h3 className="font-black text-sm text-white leading-tight uppercase tracking-wide mb-1">
+                      {dept.label}
+                    </h3>
+                    <p className="text-[10px] text-white/60 font-bold">
+                      {dept.categories.length} cats · {subCount} subcats
+                    </p>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       )}
