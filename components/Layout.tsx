@@ -431,30 +431,43 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
           {/* Divider */}
           <div className="w-px h-5 bg-slate-200 mx-1 flex-shrink-0" />
 
-          {/* Quick dept links — dynamic from supplier data */}
-          <div className="flex items-center gap-0.5 flex-1 overflow-hidden">
-            {categoryTree.map(dept => (
-              <button
-                key={dept.id}
-                onClick={() => { window.location.hash = `#category/${dept.id}`; }}
-                className="group flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all whitespace-nowrap"
-              >
-                <span className="text-sm leading-none">{dept.emoji || '📦'}</span>
-                {dept.label}
-              </button>
-            ))}
+          {/* Quick dept links — dynamic, scrollable, truncated */}
+          <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+            {categoryTree.map(dept => {
+              // Shorten long labels for the nav bar
+              const shortLabel = dept.label.length > 12
+                ? dept.label.replace('ALIMENTAÇÃO SAUDÁVEL', 'ALIMENTOS').replace('MULTIMARCAS', 'MULTI').replace('COSMÉTICOS', 'BEAUTY').replace('DECORAÇÃO', 'DECORAÇÃO').replace('KIDS E TEENS', 'KIDS')
+                : dept.label;
+              return (
+                <button
+                  key={dept.id}
+                  onClick={() => { window.location.hash = `#category/${dept.id}`; }}
+                  className="group flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11.5px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition-all whitespace-nowrap flex-shrink-0"
+                >
+                  <span className="text-sm leading-none flex-shrink-0">{dept.emoji || '📦'}</span>
+                  <span className="hidden xl:block">{dept.label}</span>
+                  <span className="xl:hidden">{shortLabel}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* País / Idioma + Cotação — lado direito */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Country selector */}
+            {/* Country / Language selector — globe icon premium */}
             <div className="relative">
               <button
                 onClick={() => setCountryOpen(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-all text-xs font-bold text-slate-700 shadow-sm"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-all text-xs font-bold text-slate-700 shadow-sm"
+                title={`País: ${activeCountry.label}`}
               >
-                <span className="text-base leading-none">{activeCountry.flag}</span>
-                <span>{activeCountry.label}</span>
+                {/* Premium globe SVG */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <span className="font-black text-slate-800">{activeCountry.code}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-400 transition-transform ${countryOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>

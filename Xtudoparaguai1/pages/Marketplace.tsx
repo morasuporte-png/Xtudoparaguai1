@@ -44,11 +44,10 @@ const HERO_SLIDES = [
 ];
 
 
-// ─── Quick access ─────────────────────────────────────────────────────────────
 const QUICK_ACCESS = [
   { icon: '🚚', label: 'Frete Grátis', desc: 'Para todo o BR', bg: 'bg-emerald-50 hover:bg-emerald-100', icon_bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-100' },
   { icon: '⚡', label: 'Flash Sale', desc: 'Até 80% OFF', bg: 'bg-amber-50 hover:bg-amber-100', icon_bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-100' },
-  { icon: '🤖', label: 'AI Advisor', desc: 'Análise Gemini', bg: 'bg-violet-50 hover:bg-violet-100', icon_bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-100' },
+  { icon: '🛡️', label: 'Compra Segura', desc: 'Garantia XTUDO', bg: 'bg-violet-50 hover:bg-violet-100', icon_bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-100' },
   { icon: '✅', label: 'Verificados', desc: '+12k sellers', bg: 'bg-indigo-50 hover:bg-indigo-100', icon_bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-100' },
   { icon: '🏷️', label: 'Cupons CDE', desc: 'Economize mais', bg: 'bg-rose-50 hover:bg-rose-100', icon_bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-100' },
   { icon: '✨', label: 'Novidades', desc: 'Recém chegados', bg: 'bg-sky-50 hover:bg-sky-100', icon_bg: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-100' },
