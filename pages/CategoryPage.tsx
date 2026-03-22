@@ -455,8 +455,8 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ slug }) => {
 
                                 <div className="flex items-start gap-5">
                                     {/* Big emoji */}
-                                    <span className="text-6xl md:text-7xl drop-shadow-lg hidden sm:block">
-                                        {categoryTree.find(d => `#category/${d.id}` === `#category/${slug.split('/')[0]}`)?.emoji || '🛍️'}
+                                    <span className="w-16 h-16 md:w-20 md:h-20 text-white/90 drop-shadow-lg hidden sm:block">
+                                        {categoryTree.find(d => `#category/${d.id}` === `#category/${slug.split('/')[0]}`)?.iconNode || <svg xmlns="http://www.w3.org/2000/svg" className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>}
                                     </span>
                                     <div className="flex-1">
                                         <h1 className="text-3xl md:text-4xl font-black text-white leading-tight mb-2">

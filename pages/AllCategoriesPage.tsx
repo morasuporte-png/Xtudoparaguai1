@@ -112,7 +112,7 @@ const AllCategoriesPage: React.FC = () => {
                                     <div className="absolute -right-2 -bottom-6 w-16 h-16 rounded-full bg-white/5" />
 
                                     <div className="relative flex items-center gap-4">
-                                        <span className="text-5xl drop-shadow-md">{dept.emoji || '📦'}</span>
+                                        <span className="w-12 h-12 text-white/90 drop-shadow-md">{dept.iconNode || '📦'}</span>
                                         <div>
                                             <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight">{dept.label}</h2>
                                             <p className="text-white/60 text-xs font-bold mt-1">

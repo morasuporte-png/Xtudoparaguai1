@@ -709,7 +709,7 @@ const Marketplace: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                   {/* Top: emoji + dots */}
                   <div className="flex items-start justify-between">
-                    <span className="text-3xl drop-shadow-sm">{dept.emoji || '📦'}</span>
+                    <span className="w-10 h-10 text-white drop-shadow-md">{dept.iconNode || '📦'}</span>
                     <span className="text-white/50 group-hover:text-white/80 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
