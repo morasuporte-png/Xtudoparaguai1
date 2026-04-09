@@ -384,15 +384,29 @@ const SellerDashboard: React.FC = () => {
             className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
           />
         </div>
-        <button
-          onClick={() => setShowProductModal(true)}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/xl" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-          </svg>
-          Novo Produto
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Importar Planilha / Catálogo */}
+          <button
+            onClick={() => { window.location.hash = '#catalogo'; }}
+            className="border border-indigo-200 bg-indigo-50 text-indigo-700 px-5 py-3 rounded-2xl text-sm font-black hover:bg-indigo-100 transition-all active:scale-95 flex items-center gap-2"
+            title="Importar produtos via CSV ou catálogo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar Catálogo
+          </button>
+          {/* Novo Produto manual */}
+          <button
+            onClick={() => setShowProductModal(true)}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/xl" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+            </svg>
+            Novo Produto
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 bg-white p-1.5 border border-slate-200 rounded-2xl w-fit">

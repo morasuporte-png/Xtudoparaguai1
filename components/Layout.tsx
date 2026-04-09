@@ -454,6 +454,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
 
           {/* País / Idioma + Cotação — lado direito */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Botão CTA: Seja Fornecedor */}
+            <button
+              onClick={() => { window.location.hash = '#sellers'; }}
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-[11px] font-black shadow-md shadow-emerald-200/50 transition-all active:scale-95 whitespace-nowrap"
+              title="Cadastre-se como Fornecedor"
+            >
+              🏪 Seja Fornecedor
+            </button>
+
             {/* Country / Language selector — globe icon premium */}
             <div className="relative">
               <button
@@ -568,7 +577,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRole, onRoleChange }) =
                 { label: 'Segurança & Trust', href: '#seguranca' },
                 { label: 'Logística', href: '#logistica' },
                 { label: 'Rastrear Pedido', href: '#track-order' },
-                { label: 'Sellers Verificados', href: '#sellers-verificados' }
+                { label: 'Sellers Verificados', href: '#sellers-verificados' },
+                { label: '🏪 Venda Conosco', href: '#sellers' },
               ]
             },
             {
